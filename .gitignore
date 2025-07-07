@@ -1,0 +1,22 @@
+# Excluir el archivo de entorno
+.env
+
+# Excluir el archivo de configuración de Nginx
+nginx.conf
+
+# Archivos de sistema de Windows
+Thumbs.db
+Desktop.ini
+
+# Archivos de sistema de macOS
+.DS_Store
+
+# Ignorar dependencias de Node.js
+node_modules/
+
+serverprueba.js
+
+nginx/
+
+.wwebjs_auth/
+.wwebjs_cache/
