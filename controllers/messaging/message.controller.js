@@ -14,7 +14,7 @@ const {
 /**
  * Envío individual
  */
-const { getIO } = require("../../websocket/socket"); // asegúrate que el path sea correcto
+const { getIO } = require("../../websocket/socket"); 
 
 exports.sendMessage = async (req, res) => {
   const { numero, mensaje } = req.body;

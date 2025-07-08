@@ -33,41 +33,51 @@ function initializeWhatsappClient(userId) {
 
   client.on("disconnected", (reason) => {
     console.log(`🔌 Usuario ${userId} desconectado: ${reason}`);
-    clients.delete(userId); // eliminar cliente en memoria
+    clients.delete(userId);
   });
 
-const { getIO } = require("../websocket/socket"); // Asegúrate de que la ruta sea correcta
+  const { getIO } = require("../websocket/socket");
 
-client.on("message", async (msg) => {
-  const contact = await msg.getContact();
+  client.on("message", async (msg) => {
+    if (msg.isGroupMsg || msg.from === "status@broadcast") {
+      return;
+    }
 
-  const payload = {
-    numero: msg.from,
-    nombre: contact.pushname || "Desconocido",
-    mensaje: msg.body,
-    hora: new Date().toISOString(),
-    tipo: "recibido", // ✅ agregas esto
-  };
+    const from = msg.from?.trim();
+    if (!/^[0-9]+@c\.us$/.test(from)) {
+      return;
+    }
 
-  // Guardar mensaje en memoria por usuario
-  if (!mensajesPorUsuario.has(userId)) {
-    mensajesPorUsuario.set(userId, []);
-  }
-  mensajesPorUsuario.get(userId).push(payload);
+    const body = msg.body?.trim();
+    if (!body) {
+      return;
+    }
 
-  // Emitir al frontend vía WebSocket
-  const io = getIO();
-  if (io) {
-    io.to("words_updates").emit("new_message", {
-      ...payload,
-      userId,
-    });
-    console.log("📩 Nuevo mensaje emitido a WebSocket:", payload);
-  } else {
-    console.warn("⚠️ WebSocket IO no inicializado");
-  }
-});
+    const contact = await msg.getContact();
+    const payload = {
+      numero: from,
+      nombre: contact.pushname || "Desconocido",
+      mensaje: body,
+      hora: new Date().toISOString(),
+      tipo: "recibido",
+    };
 
+    if (!mensajesPorUsuario.has(userId)) {
+      mensajesPorUsuario.set(userId, []);
+    }
+    mensajesPorUsuario.get(userId).push(payload);
+
+    const io = getIO();
+    if (io) {
+      io.to("words_updates").emit("new_message", {
+        ...payload,
+        userId,
+      });
+      console.log("📩 Nuevo mensaje válido emitido a WebSocket:", payload);
+    } else {
+      console.warn("⚠️ WebSocket IO no inicializado");
+    }
+  });
 
   client.initialize();
   clients.set(userId, client);
