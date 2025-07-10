@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const personSchema = new mongoose.Schema({
   // Datos básicos (comunes a todos)
@@ -67,4 +67,4 @@ personSchema.index({ dni: 1 }, { unique: true });
 personSchema.index({ email: 1 }, { unique: true });
 personSchema.index({ userRef: 1 }, { unique: true });
 
-module.exports = mongoose.model('Person', personSchema);
+export default mongoose.model('Person', personSchema);

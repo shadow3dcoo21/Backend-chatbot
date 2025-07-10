@@ -1,7 +1,7 @@
-const permissions = require('../../config/permissions');
-const mongoose = require('mongoose');
-const User = require('../../models/Users/User');
-const Person = require('../../models/Person/Person');
+import permissions from '../../config/permissions.js';
+import mongoose from 'mongoose';
+import User from '../../models/Users/User.js';
+import Person from '../../models/Person/Person.js';
 
 const validateRegistrationPermissions = (req, res, next) => {
     const creatorRole = req.user.role;
@@ -83,7 +83,7 @@ const validateModificationAccess = async (req, res, next) => {
     }
   };
 
-module.exports = {
+export {
     validateModificationAccess,
     validateRegistrationPermissions
 }

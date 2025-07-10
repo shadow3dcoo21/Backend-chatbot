@@ -1,7 +1,10 @@
-const { Client, LocalAuth } = require("whatsapp-web.js");
-const qrcode = require("qrcode");
-const fs = require("fs");
-const path = require("path");
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { Client, LocalAuth } = require('whatsapp-web.js');
+import qrcode from "qrcode";
+import fs from "fs";
+import path from "path";
+import { getIO } from "../websocket/socket.js";
 
 const clients = new Map(); // Aquí se guardan todos los clientes activos
 const qrCodes = new Map(); // Aquí se guarda el QR por usuario
@@ -35,8 +38,6 @@ function initializeWhatsappClient(userId) {
     console.log(`🔌 Usuario ${userId} desconectado: ${reason}`);
     clients.delete(userId);
   });
-
-  const { getIO } = require("../websocket/socket");
 
   client.on("message", async (msg) => {
     if (msg.isGroupMsg || msg.from === "status@broadcast") {
@@ -122,7 +123,7 @@ function eliminarSesion(userId) {
   mensajesPorUsuario.delete(userId);
 }
 
-module.exports = {
+export {
   initializeWhatsappClient,
   getClient,
   isClientReady,

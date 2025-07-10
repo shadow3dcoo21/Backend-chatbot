@@ -1,22 +1,23 @@
 // src/controllers/message.controller.js
 
-const multer = require("multer");
-const fs = require("fs");
-const csv = require("csv-parser");
-const upload = multer({ dest: "mensajes/" });
-const jwt = require("jsonwebtoken");
-const {
+import multer from "multer";
+import fs from "fs";
+import csv from "csv-parser";
+import jwt from "jsonwebtoken";
+import {
   getClient,
   saveIncomingMessage,
   getAllMessages,
-} = require("../../services/whatsapp.service");
+} from "../../services/whatsapp.service.js";
+
+const upload = multer({ dest: "mensajes/" });
 
 /**
  * Envío individual
  */
-const { getIO } = require("../../websocket/socket"); 
+import { getIO } from "../../websocket/socket.js"; 
 
-exports.sendMessage = async (req, res) => {
+export const sendMessage = async (req, res) => {
   const { numero, mensaje } = req.body;
 
   // 🔐 Extraer userId desde el token
@@ -70,7 +71,7 @@ exports.sendMessage = async (req, res) => {
 /**
  * Masivo desde CSV (mantenerlo como estaba)
  */
-exports.sendMassiveMessagesFromCsv = [
+export const sendMassiveMessagesFromCsv = [
   upload.single("archivo"),
   (req, res) => {
     const ruta = req.file.path;
@@ -99,7 +100,7 @@ exports.sendMassiveMessagesFromCsv = [
 /**
  * Masivo desde TXT (mantenerlo como estaba)
  */
-exports.sendMassiveMessagesFromTxt = [
+export const sendMassiveMessagesFromTxt = [
   multer({ dest: "mensajes_txt/" }).single("archivoTxt"),
   async (req, res) => {
     try {
@@ -143,7 +144,7 @@ exports.sendMassiveMessagesFromTxt = [
  * 'numeros' puede ser: "51987654321\n51912345678\n51911122233"
  *   o también: "51987654321,51912345678,51911122233"
  */
-exports.sendMassiveMessagesFromList = async (req, res) => {
+export const sendMassiveMessagesFromList = async (req, res) => {
   try {
     const { numeros, mensaje } = req.body;
     if (!numeros || !mensaje) {
@@ -208,7 +209,7 @@ exports.sendMassiveMessagesFromList = async (req, res) => {
 /**
  * Obtener mensajes recibidos
  */
-exports.getReceivedMessages = (req, res) => {
+export const getReceivedMessages = (req, res) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.split(" ")[1];
 

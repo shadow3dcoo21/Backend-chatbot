@@ -22,4 +22,4 @@ const corsOptions = {
   credentials: true
 };
 
-module.exports = { corsOptions, whitelist };
+export { corsOptions, whitelist };

@@ -1,6 +1,6 @@
-const { getQrImage, isClientReady } = require("../../services/whatsapp.service");
+import { getQrImage, isClientReady } from "../../services/whatsapp.service.js";
 
-exports.getQrController = (req, res) => {
+export const getQrController = (req, res) => {
   const userId = req.user?.id;
   if (!userId) {
     return res.status(401).json({ message: "Usuario no autenticado" });

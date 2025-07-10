@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const User = require('../../models/Users/User');
-const Person = require('../../models/Person/Person');
-const crypto = require('crypto');
-const permissions = require('../../config/permissions');
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import User from '../../models/Users/User.js';
+import Person from '../../models/Person/Person.js';
+import crypto from 'crypto';
+import permissions from '../../config/permissions.js';
 
 const changeStatus = async (req, res) => {
     const { userId } = req.params;
@@ -420,12 +420,11 @@ const getMyProfile = async (req, res) => {
     }
   };
 
-module.exports = {
+export {
     changeStatus,
     deleteUser,
     getMyProfile,
     getUserById,
     getUsers,
     updateUser,
-
-}
+};

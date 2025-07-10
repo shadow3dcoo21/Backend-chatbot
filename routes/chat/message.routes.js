@@ -1,14 +1,8 @@
 // src/routes/message.routes.js
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const {
-  sendMessage,
-  sendMassiveMessagesFromCsv,
-  sendMassiveMessagesFromTxt,
-  sendMassiveMessagesFromList, // <-- nuevo handler
-  getReceivedMessages,
-} = require("../../controllers/messaging/message.controller");
+import { sendMessage, sendMassiveMessagesFromCsv, sendMassiveMessagesFromTxt, sendMassiveMessagesFromList, getReceivedMessages } from "../../controllers/messaging/message.controller.js";
 
 router.post("/send", sendMessage);
 
@@ -23,4 +17,4 @@ router.post("/massive-list", sendMassiveMessagesFromList);
 
 router.get("/received", getReceivedMessages);
 
-module.exports = router;
+export default router;

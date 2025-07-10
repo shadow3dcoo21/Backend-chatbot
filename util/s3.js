@@ -1,9 +1,9 @@
-const AWS = require('aws-sdk');
-const fs = require('fs');
-require('dotenv').config(); //lee archivo .env
+import 'dotenv/config';
+import { S3 } from 'aws-sdk';
+import { readFileSync } from 'fs';
 
 // Configura las credenciales y el endpoint específico de R2
-const s3 = new AWS.S3({
+const s3 = new S3({
   endpoint: process.env.CLOUDFLARE_ENDPOINT, // Endpoint de Cloudflare R2
   accessKeyId: process.env.AWS_ACCESS_KEY_ID, // ID de clave de acceso
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY, // Clave de acceso secreta
@@ -35,6 +35,6 @@ const uploadFile = async (fileName, fileBuffer, mimeType) => {
   }
 };
 
-module.exports = {
+export {
   uploadFile,
 };

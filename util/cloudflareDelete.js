@@ -1,4 +1,4 @@
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const R2 = new S3Client({
   region: "auto",
@@ -23,4 +23,4 @@ const deleteFile = async (fileName) => {
   }
 };
 
-module.exports = { deleteFile };
+export { deleteFile };

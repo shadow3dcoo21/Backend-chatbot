@@ -23,4 +23,4 @@ const permissions = {
   }
 };
 
-module.exports = permissions; 
+export default permissions; 

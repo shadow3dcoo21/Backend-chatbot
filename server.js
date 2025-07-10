@@ -1,12 +1,16 @@
-const http = require('http');
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const connectDB = require('./config/db/db');
+import http from 'http';
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import connectDB from './config/db/db.js';
 
 // Configuración de CORS
-const { corsOptions } = require('./config/cors/cors');
+import { corsOptions } from './config/cors/cors.js';
 
 // Inicializar la aplicación
 const app = express();
@@ -19,7 +23,7 @@ connectDB();
 const server = http.createServer(app);
 
 // Configurar WebSocket
-const { setupWebSocket } = require('./websocket/socket');
+import { setupWebSocket } from './websocket/socket.js';
 const io = setupWebSocket(server);
 global.io = io;
 
@@ -49,18 +53,18 @@ app.get('/api/test-socket', (req, res) => {
 });
 
 // Rutas de autenticación y funcionalidad
-const authRoutes = require('./routes/auth/authRoutes');
-const qrRoutes = require("./routes/chat/qr.routes");
-const messageRoutes = require("./routes/chat/message.routes");
-const statusRoutes = require("./routes/chat/status.routes");
-const whatsappStartRoutes = require('./routes/whatsapp/start.routes'); // 🚀 Nueva ruta
+import authRoutes from './routes/auth/authRoutes.js';
+import qrRoutes from './routes/chat/qr.routes.js';
+import messageRoutes from './routes/chat/message.routes.js';
+import statusRoutes from './routes/chat/status.routes.js';
+import whatsappStartRoutes from './routes/whatsapp/start.routes.js';
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/qr", qrRoutes);
 app.use("/api/whatsapp/status", statusRoutes);
-app.use("/api/whatsapp/start", whatsappStartRoutes); // 🚀 Nueva ruta
+app.use("/api/whatsapp/start", whatsappStartRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
@@ -92,4 +96,4 @@ server.listen(PORT, '0.0.0.0', () => {
 });
 
 // Exportar para pruebas u otros usos
-module.exports = { app, server, io };
+export { app, server, io };

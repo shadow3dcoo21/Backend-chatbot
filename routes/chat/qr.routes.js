@@ -1,8 +1,9 @@
-const express = require("express");
+import express from "express";
+import { getQrController } from "../../controllers/messaging/qr.controller.js";
+import authenticate from "../../middlewares/authMiddleware.js";
+
 const router = express.Router();
-const { getQrController } = require("../../controllers/messaging/qr.controller");
-const authenticate = require("../../middlewares/authMiddleware");
 
 router.get("/", authenticate, getQrController);
 
-module.exports = router;
+export default router;

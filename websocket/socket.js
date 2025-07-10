@@ -1,6 +1,6 @@
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-const { whitelist } = require('../config/cors/cors');
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import { whitelist } from '../config/cors/cors.js';
 
 let ioGlobal = null; // Se usará para acceder al io desde otros archivos
 
@@ -86,8 +86,9 @@ function setupWebSocket(server) {
   return io;
 }
 
+function getIO() {
+  return ioGlobal;
+}
+
 // Exportamos tanto la función como el getter de ioGlobal
-module.exports = {
-  setupWebSocket,
-  getIO: () => ioGlobal
-};
+export { setupWebSocket, getIO };

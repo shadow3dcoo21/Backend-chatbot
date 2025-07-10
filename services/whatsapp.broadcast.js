@@ -1,5 +1,5 @@
-const axios = require("axios");
-const { getClient, saveIncomingMessage } = require("./whatsapp.service");
+import axios from "axios";
+import { getClient, saveIncomingMessage } from "./whatsapp.service.js";
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
@@ -65,4 +65,4 @@ function setupWhatsAppSocketBroadcast(userId) {
   });
 }
 
-module.exports = { setupWhatsAppSocketBroadcast };
+export { setupWhatsAppSocketBroadcast };

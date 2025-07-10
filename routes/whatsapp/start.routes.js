@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import authenticate from '../../middlewares/authMiddleware.js';
+import { initializeWhatsappClient } from '../../services/whatsapp.service.js';
+import { setupWhatsAppSocketBroadcast } from '../../services/whatsapp.broadcast.js'; // 👈 Asegúrate de crear este archivo
+
 const router = express.Router();
-const authenticate = require('../../middlewares/authMiddleware');
-const { initializeWhatsappClient } = require('../../services/whatsapp.service');
-const { setupWhatsAppSocketBroadcast } = require('../../services/whatsapp.broadcast'); // 👈 Asegúrate de crear este archivo
 
 router.post('/', authenticate, async (req, res) => {
   const userId = req.user.id;
@@ -17,4 +18,4 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

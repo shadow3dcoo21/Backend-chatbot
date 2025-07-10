@@ -1,6 +1,6 @@
-const permissions = require('../../config/permissions');
-const mongoose = require('mongoose');
-const User = require('../../models/Users/User');
+import permissions from '../../config/permissions.js';
+import mongoose from 'mongoose';
+import User from '../../models/Users/User.js';
 
 // Middleware para validar acceso a listado de usuarios
 const validateListAccess = (req, res, next) => {
@@ -83,7 +83,7 @@ const validateListAccess = (req, res, next) => {
     }
   };
 
-module.exports = {
+export {
     validateUserAccess,
     validateListAccess
 }
