@@ -1,7 +1,5 @@
-import permissions from '../../config/permissions.js';
-import mongoose from 'mongoose';
-import User from '../../models/Users/User.js';
-import Person from '../../models/Person/Person.js';
+import permissions from '../config/permissions.js';
+import User from '../models/Users/User.js';
 
 const validateRegistrationPermissions = (req, res, next) => {
     const creatorRole = req.user.role;
@@ -25,6 +23,7 @@ const validateRegistrationPermissions = (req, res, next) => {
 // Middleware para validar permisos de modificación - Refactorizado
 const validateModificationAccess = async (req, res, next) => {
     try {
+      console.log("objeto user", req.user)
       const userRole = req.user.role;
       const userId = req.user.id; // Usar id en lugar de userId
       const targetUserId = req.params.id;
