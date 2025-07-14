@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
@@ -9,8 +9,8 @@ const connectDB = async () => {
     console.log('MongoDB conectado');
   } catch (err) {
     console.error('Error de conexión a MongoDB:', err.message);
-    process.exit(1);  // Salir si hay error
+    process.exit(1);
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

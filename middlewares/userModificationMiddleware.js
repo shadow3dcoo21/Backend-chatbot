@@ -2,23 +2,54 @@ import permissions from '../config/permissions.js';
 import User from '../models/Users/User.js';
 
 const validateRegistrationPermissions = (req, res, next) => {
-    const creatorRole = req.user.role;
-    const targetRole  = req.originalUrl.split('/').pop();
-  
-    const canCreate = permissions.canCreate;
-  
-    if (!canCreate[creatorRole]) {
-      return res.status(403).json({ message: 'Rol de usuario no válido para registros' });
+  try {
+    // Verificar que el usuario esté autenticado
+    if (!req.user) {
+      return res.status(401).json({
+        message: 'Token de autenticación requerido'
+      });
     }
+
+    // Extraer roles
+    const creatorRole = req.user.role;
+    const targetRole = req.body.role;
+
+    // Validar que se haya enviado el rol objetivo
+    if (!targetRole) {
+      return res.status(400).json({
+        message: 'Se requiere el rol del nuevo usuario (role) en el cuerpo de la solicitud'
+      });
+    }
+
+    const canCreate = permissions.canCreate;
+
+    
+    if (!canCreate[creatorRole]) {
+      return res.status(403).json({
+        message: `Tu rol '${creatorRole}' no tiene permisos para crear usuarios`
+      });
+    }
+
+   
     if (!canCreate[creatorRole].includes(targetRole)) {
       return res.status(403).json({
         message: `Tu rol '${creatorRole}' no puede crear usuarios con rol '${targetRole}'.`
       });
     }
-  
+
+    
     req.targetRole = targetRole;
     next();
-  };
+
+  } catch (error) {
+    console.error('Error en validación de permisos:', error);
+    return res.status(500).json({
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 
 // Middleware para validar permisos de modificación - Refactorizado
 const validateModificationAccess = async (req, res, next) => {

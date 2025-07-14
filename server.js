@@ -53,7 +53,7 @@ app.get('/api/test-socket', (req, res) => {
 });
 
 // Rutas de autenticación y funcionalidad
-import authRoutes from './routes/auth/authRoutes.js';
+import authRoutes from './routes/auth/auth.routes.js';
 import qrRoutes from './routes/chat/qr.routes.js';
 import messageRoutes from './routes/chat/message.routes.js';
 import statusRoutes from './routes/chat/status.routes.js';

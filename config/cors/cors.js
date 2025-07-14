@@ -1,9 +1,5 @@
 
 const whitelist = [
-  'https://sordomundo.pro',
-  'https://www.sordomundo.pro',
-  'https://sordomundo.vercel.app', 
-  'http://sordomundo.pro',
   'https://localhost:3000',
   'http://localhost:3000',
   'http://localhost:5173'

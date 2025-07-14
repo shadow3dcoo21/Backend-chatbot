@@ -25,14 +25,15 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: 'Usuario o contraseña incorrectos' });
     }
-
+    /*
     // 3️⃣ Si es admin o superadmin, validar accessCode
     if (['admin', 'superadmin'].includes(user.role)) {
       if (!accessCode || accessCode !== user.accessCode) {
         return res.status(400).json({ message: 'Código de acceso inválido o no proporcionado' });
       }
     }
-
+    */
+   
     // 4️⃣ Crear payload para JWT
     const payload = {
       id: user._id,

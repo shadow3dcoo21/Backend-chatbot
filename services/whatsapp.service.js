@@ -39,7 +39,7 @@ function initializeWhatsappClient(userId) {
     clients.delete(userId);
   });
 
-  client.on("message", async (msg) => {
+ /* client.on("message", async (msg) => {
     if (msg.isGroupMsg || msg.from === "status@broadcast") {
       return;
     }
@@ -79,7 +79,7 @@ function initializeWhatsappClient(userId) {
       console.warn("⚠️ WebSocket IO no inicializado");
     }
   });
-
+*/
   client.initialize();
   clients.set(userId, client);
   return client;
