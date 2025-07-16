@@ -16,7 +16,8 @@ const authMiddleware = (req, res, next) => {
       username: decoded.username,
       role: decoded.role,
       profile: decoded.profile,
-      status: decoded.status
+      status: decoded.status,
+      ...(decoded.company && { company: decoded.company })
     };
     console.log("req user", req.user)
     next();

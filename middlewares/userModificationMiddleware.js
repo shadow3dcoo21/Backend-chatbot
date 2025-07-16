@@ -37,6 +37,15 @@ const validateRegistrationPermissions = (req, res, next) => {
       });
     }
 
+    // Validación de empresa para admin
+    if (creatorRole === 'admin') {
+      if (!req.body.companyId || !req.user.company || req.body.companyId !== String(req.user.company.id)) {
+        return res.status(403).json({
+          message: 'Solo puedes crear usuarios para tu propia empresa.'
+        });
+      }
+    }
+
     
     req.targetRole = targetRole;
     next();
@@ -77,7 +86,7 @@ const validateModificationAccess = async (req, res, next) => {
       }
   
       // Verificar rol del usuario objetivo
-      const targetUser = await User.findById(targetUserId).select('role status');
+      const targetUser = await User.findById(targetUserId).select('role status companyRef');
       if (!targetUser) {
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
@@ -85,6 +94,15 @@ const validateModificationAccess = async (req, res, next) => {
       // Validar que el usuario objetivo esté activo
       if (targetUser.status !== 'active') {
         return res.status(404).json({ message: "Usuario no encontrado o inactivo" });
+      }
+  
+      // Validación de empresa para admin
+      if (userRole === 'admin') {
+        if (!req.user.company || !targetUser.companyRef || String(targetUser.companyRef) !== String(req.user.company.id)) {
+          return res.status(403).json({
+            message: 'Solo puedes modificar usuarios de tu propia empresa.'
+          });
+        }
       }
   
       // Verificar si el rol del usuario objetivo está permitido para modificación

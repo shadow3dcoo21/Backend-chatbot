@@ -39,6 +39,11 @@ const userSchema = new mongoose.Schema({
       },
       message: 'El código de acceso es obligatorio para roles admin o superadmin.'
     }
+  },
+  companyRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: false // Opcional por ahora
   }
 }, { timestamps: true });
 

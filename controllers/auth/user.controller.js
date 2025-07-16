@@ -5,6 +5,7 @@ import User from '../../models/Users/User.js';
 import Person from '../../models/Person/Person.js';
 import crypto from 'crypto';
 import permissions from '../../config/permissions.js';
+import Company from '../../models/Company/Company.js';
 
 const changeStatus = async (req, res) => {
   const { id } = req.params;
@@ -76,17 +77,20 @@ const getUsers = async (req, res) => {
       return res.status(403).json({ message: 'No tienes permisos para listar usuarios' });
     }
 
-    // Construir filtro optimizado basado en permisos centralizados
+    // Construir filtro optimizado basado en permisos centralizados y empresa
     let filter = { role: { $in: canListRoles } };
 
     // Si no es superadmin, incluir su propio perfil
     if (userRole !== 'superadmin') {
       filter = {
         $or: [
-          { role: { $in: canListRoles } },
+          { role: { $in: canListRoles }, ...(req.companyFilter || {}) },
           { _id: userId }
         ]
       };
+    } else if (req.companyFilter) {
+      // Por si algún día superadmin tiene filtro de empresa
+      filter = { ...filter, ...req.companyFilter };
     }
 
     // Consulta optimizada con populate y select
@@ -96,15 +100,22 @@ const getUsers = async (req, res) => {
         path: 'profileRef',
         select: 'firstName lastName email dni age phone sex status'
       })
+      .populate('companyRef')
       .lean()
       .exec();
 
     // Formatear respuesta de manera más eficiente
     const formattedUsers = users.map(user => {
-      const { profileRef, ...userData } = user;
+      const { profileRef, companyRef, ...userData } = user;
       return {
         ...userData,
-        ...profileRef
+        ...profileRef,
+        ...(companyRef && {
+          company: {
+            id: companyRef._id,
+            name: companyRef.name,
+          }
+        })
       };
     });
 
@@ -147,6 +158,7 @@ const getUserById = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
+      .populate('companyRef')
       .lean();
 
     if (!user) {
@@ -154,11 +166,17 @@ const getUserById = async (req, res) => {
     }
 
     // Formatear respuesta
+    const { profileRef, companyRef, ...userData } = user;
     const formattedUser = {
-      ...user,
-      ...user.profileRef
+      ...userData,
+      ...profileRef,
+      ...(companyRef && {
+        company: {
+          id: companyRef._id,
+          name: companyRef.name,
+        }
+      })
     };
-    delete formattedUser.profileRef;
 
     // Log de auditoría
     console.log(`Usuario ${req.user.username} (${userRole}) consultó perfil de usuario ID: ${id}`);
@@ -282,13 +300,20 @@ const updateUser = async (req, res) => {
         path: 'profileRef',
         select: 'firstName lastName email dni age phone sex status'
       })
+      .populate('companyRef')
       .lean();
 
+    const { profileRef, companyRef, ...userData } = finalUser;
     const formattedUser = {
-      ...finalUser,
-      ...finalUser.profileRef
+      ...userData,
+      ...profileRef,
+      ...(companyRef && {
+        company: {
+          id: companyRef._id,
+          name: companyRef.name,
+        }
+      })
     };
-    delete formattedUser.profileRef;
 
     // Log de auditoría
     console.log(`Usuario ${req.user.username} (${req.user.role}) actualizó usuario ID: ${id}`);
@@ -378,17 +403,24 @@ const getMyProfile = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
+      .populate('companyRef')
       .lean();
 
     if (!user) {
       return res.status(404).json({ message: "Perfil no encontrado" });
     }
 
+    const { profileRef, companyRef, ...userData } = user;
     const formattedUser = {
-      ...user,
-      ...user.profileRef
+      ...userData,
+      ...profileRef,
+      ...(companyRef && {
+        company: {
+          id: companyRef._id,
+          name: companyRef.name,
+        }
+      })
     };
-    delete formattedUser.profileRef;
 
     return res.status(200).json({
       message: "Perfil obtenido exitosamente",
@@ -429,6 +461,7 @@ const getUserByPersonId = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
+      .populate('companyRef')
       .lean();
 
     if (!user) {
@@ -436,11 +469,17 @@ const getUserByPersonId = async (req, res) => {
     }
 
     // Formatear respuesta
+    const { profileRef, companyRef, ...userData } = user;
     const formattedUser = {
-      ...user,
-      ...user.profileRef
+      ...userData,
+      ...profileRef,
+      ...(companyRef && {
+        company: {
+          id: companyRef._id,
+          name: companyRef.name,
+        }
+      })
     };
-    delete formattedUser.profileRef;
 
     // Log de auditoría
     console.log(`Usuario ${req.user.username} (${userRole}) consultó perfil de usuario por Person ID: ${id}`);

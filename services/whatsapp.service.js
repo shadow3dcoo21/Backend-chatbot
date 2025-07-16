@@ -19,7 +19,6 @@ function initializeWhatsappClient(userId) {
     authStrategy: new LocalAuth({ clientId: userId }),
     puppeteer: { headless: true },
   });
-
   client.on("qr", async (qr) => {
     const qrImage = await qrcode.toDataURL(qr);
     qrCodes.set(userId, qrImage);
@@ -89,6 +88,11 @@ function getClient(userId) {
   return clients.get(userId);
 }
 
+async function getContacts(userId){
+  const client = clients.get(userId);
+  return await client.getContacts()
+}
+
 function isClientReady(userId) {
   const client = clients.get(userId);
   return client ? client.info?.wid?.user : false;
@@ -126,6 +130,7 @@ function eliminarSesion(userId) {
 export {
   initializeWhatsappClient,
   getClient,
+  getContacts,
   isClientReady,
   getQrImage,
   saveIncomingMessage,

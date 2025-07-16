@@ -5,6 +5,7 @@ import User from '../../models/Users/User.js';
 import Person from '../../models/Person/Person.js';
 import crypto from 'crypto';
 import permissions from '../../config/permissions.js';
+import Company from '../../models/Company/Company.js';
 
 // Función para loguearse (para 4 roles: alumno, profesor, externo y admin)
 
@@ -15,7 +16,9 @@ const loginUser = async (req, res) => {
 
   try {
     // 1️⃣ Buscar usuario activo
-    const user = await User.findOne({ username, status: 'active' }).populate('profileRef');
+    const user = await User.findOne({ username, status: 'active' })
+      .populate('profileRef')
+      .populate('companyRef');
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado o cuenta inactiva' });
     }
@@ -46,6 +49,12 @@ const loginUser = async (req, res) => {
           lastName: user.profileRef.lastName,
           email: user.profileRef.email,
         }
+      }),
+      ...(user.companyRef && {
+        company: {
+          id: user.companyRef._id,
+          name: user.companyRef.name,
+        }
       })
     };
 
@@ -62,6 +71,12 @@ const loginUser = async (req, res) => {
         ...(user.profileRef && {
           firstName: user.profileRef.firstName,
           lastName: user.profileRef.lastName,
+        }),
+        ...(user.companyRef && {
+          company: {
+            id: user.companyRef._id,
+            name: user.companyRef.name,
+          }
         })
       }
     });
@@ -101,7 +116,8 @@ const registerUser = async (req, res) => {
     email,
     dni,
     age,
-    phone
+    phone,
+    companyId // <-- nuevo campo opcional
   } = req.body;
 
   let newUser, newPerson;
@@ -144,7 +160,8 @@ const registerUser = async (req, res) => {
       role,
       status:     'active',
       accessCode,          // undefined para 'general'
-      createdBy:  null
+      createdBy:  null,
+      companyRef: companyId || undefined // Asociar si viene, si no dejar undefined
     });
 
     // 7️⃣ Crear Person
