@@ -45,12 +45,13 @@ function setupWhatsAppSocketBroadcast(userId) {
     global.io.to(userId).emit("new_message", payload);
 
     try {
-      const respuesta = await axios.post(process.env.N8N_WEBHOOK, payload);
-
+      const endpoint = process.env.N8N_WEBHOOK
+      const respuesta = await axios.post(endpoint, payload);
       if (respuesta.data?.respuesta) {
         await client.sendMessage(from, respuesta.data.respuesta);
         global.io.to(userId).emit("new_bot_response", {
           numero: from,
+          nombre: contact.pushname,
           respuesta: respuesta.data.respuesta,
           hora: new Date().toISOString(),
         });
