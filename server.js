@@ -59,6 +59,7 @@ import messageRoutes from './routes/chat/message.routes.js';
 import statusRoutes from './routes/chat/status.routes.js';
 import whatsappStartRoutes from './routes/whatsapp/start.routes.js';
 import userRoutes from './routes/auth/user.routes.js';
+import configChatbotRoutes from './routes/chat/configchatbot.routes.js';
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
@@ -67,6 +68,7 @@ app.use("/api/qr", qrRoutes);
 app.use("/api/whatsapp/status", statusRoutes);
 app.use("/api/whatsapp/start", whatsappStartRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/configchatbot', configChatbotRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {

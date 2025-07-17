@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getClient, saveIncomingMessage } from "./whatsapp.service.js";
+import { isChatbotActive } from "./configChatbot.service.js";
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
@@ -41,6 +42,12 @@ function setupWhatsAppSocketBroadcast(userId) {
       hora: new Date().toISOString(),
     };
 
+    // Consultar si el chatbot está activo
+    const activo = await isChatbotActive();
+    if (!activo) {
+      return;
+    }
+
     console.log("📩 Nuevo mensaje válido broadcast:", payload);
     global.io.to(userId).emit("new_message", payload);
 
@@ -52,7 +59,7 @@ function setupWhatsAppSocketBroadcast(userId) {
         global.io.to(userId).emit("new_bot_response", {
           numero: from,
           nombre: contact.pushname,
-          respuesta: respuesta.data.respuesta,
+          mensaje: respuesta.data.respuesta,
           hora: new Date().toISOString(),
         });
         saveIncomingMessage(userId, payload, respuesta.data.respuesta);
