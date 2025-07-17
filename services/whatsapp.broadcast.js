@@ -42,8 +42,8 @@ function setupWhatsAppSocketBroadcast(userId) {
       hora: new Date().toISOString(),
     };
 
-    // Consultar si el chatbot está activo
-    const activo = await isChatbotActive();
+    // Consultar si el chatbot está activo para este usuario
+    const activo = await isChatbotActive(userId);
     if (!activo) {
       return;
     }
