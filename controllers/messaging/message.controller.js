@@ -54,13 +54,13 @@ export const sendMessage = async (req, res) => {
     });
 
     // 🛰️ Emitirlo también a WebSocket para que aparezca en el chat
-    const io = getIO();
-    if (io) {
-      io.to("words_updates").emit("new_message", {
-        ...payload,
-        userId,
-      });
-    }
+    // const io = getIO();
+    // if (io) {
+    //   io.to("words_updates").emit("new_message", {
+    //     ...payload,
+    //     userId,
+    //   });
+    // }
 
     return res.json({ status: "Mensaje enviado correctamente" });
   } catch (err) {
