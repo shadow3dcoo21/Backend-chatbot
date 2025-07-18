@@ -1,6 +1,7 @@
 import axios from "axios";
 import { getClient, saveIncomingMessage } from "./whatsapp.service.js";
 import { isChatbotActive } from "./configChatbot.service.js";
+import { obtenerRespuestaFAQ } from "../controllers/faq.controller.js"
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
@@ -41,16 +42,28 @@ function setupWhatsAppSocketBroadcast(userId) {
       mensaje: body,
       hora: new Date().toISOString(),
     };
-
     // Consultar si el chatbot está activo para este usuario
     const activo = await isChatbotActive(userId);
     if (!activo) {
       return;
     }
-
     console.log("📩 Nuevo mensaje válido broadcast:", payload);
     global.io.to(userId).emit("new_message", payload);
-
+    // Consultar FAQ antes de seguir
+    const respuestaFAQ = obtenerRespuestaFAQ(body);
+    if (respuestaFAQ) {
+      console.log("Enviando respuesta de FAQ", respuestaFAQ)
+      await client.sendMessage(from, respuestaFAQ);
+      global.io.to(userId).emit("new_bot_response", {
+        numero: from,
+        nombre: contact.pushname,
+        mensaje: respuestaFAQ,
+        hora: new Date().toISOString(),
+      });
+      saveIncomingMessage(userId, payload, respuestaFAQ);
+      return;
+    }
+    
     try {
       const endpoint = process.env.N8N_WEBHOOK
       const respuesta = await axios.post(endpoint, payload);
