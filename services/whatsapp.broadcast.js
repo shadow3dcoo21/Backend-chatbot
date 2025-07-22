@@ -56,12 +56,13 @@ function setupWhatsAppSocketBroadcast(userId) {
     if (respuestaFAQ) {
       console.log("Enviando respuesta de FAQ", respuestaFAQ)
       await client.sendMessage(from, respuestaFAQ);
-      global.io.to(userId).emit("new_bot_response", {
-        numero: from,
-        nombre: contact.pushname,
-        mensaje: respuestaFAQ,
-        hora: new Date().toISOString(),
-      });
+      // global.io.to(userId).emit("new_bot_response", {
+      //   numero: from,
+      //   nombre: contact.pushname,
+      //   mensaje: respuestaFAQ,
+      //   hora: new Date().toISOString(),
+      //   tipo: "enviado"
+      // });
       saveIncomingMessage(userId, payload, respuestaFAQ);
       return;
     }
@@ -70,13 +71,17 @@ function setupWhatsAppSocketBroadcast(userId) {
       const endpoint = process.env.N8N_WEBHOOK
       const respuesta = await axios.post(endpoint, payload);
       if (respuesta.data?.respuesta) {
+        console.log("Enviando mensaje", respuesta.data.respuesta)
         await client.sendMessage(from, respuesta.data.respuesta);
-        global.io.to(userId).emit("new_bot_response", {
-          numero: from,
-          nombre: contact.pushname,
-          mensaje: respuesta.data.respuesta,
-          hora: new Date().toISOString(),
-        });
+
+        // global.io.to(userId).emit("new_message", {
+        //   numero: from,
+        //   nombre: contact.pushname,
+        //   mensaje: respuesta.data.respuesta,
+        //   hora: new Date().toISOString(),
+        //   tipo: "enviado"
+        // });
+        console.log("Mensaje enviado")
         saveIncomingMessage(userId, payload, respuesta.data.respuesta);
       } else {
         saveIncomingMessage(userId, payload, null);
