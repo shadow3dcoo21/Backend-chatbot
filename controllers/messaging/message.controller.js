@@ -15,7 +15,7 @@ const upload = multer({ dest: "mensajes/" });
 /**
  * Envío individual
  */
-import { getIO } from "../../websocket/socket.js"; 
+import { getIO } from "../../websocket/socket.js";
 
 export const sendMessage = async (req, res) => {
   const { numero, mensaje } = req.body;
@@ -45,13 +45,13 @@ export const sendMessage = async (req, res) => {
     };
 
     // 🧠 Guardar mensaje en memoria como "mensaje enviado"
-    saveIncomingMessage(userId, {
-      numero: chatId,
-      nombre: null,
-      mensaje,
-      hora: new Date().toISOString(),
-      tipo: "enviado", // 🆕
-    });
+    // saveIncomingMessage(userId, {
+    //   numero: chatId,
+    //   nombre: null,
+    //   mensaje,
+    //   hora: new Date().toISOString(),
+    //   tipo: "enviado", // 🆕
+    // });
 
     // 🛰️ Emitirlo también a WebSocket para que aparezca en el chat
     // const io = getIO();

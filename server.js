@@ -34,10 +34,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Importar rutas
+import botRoutes from './routes/bot.routes.js';
+
 // Rutas principales
 app.get('/', (req, res) => {
   res.status(200).send('Bienvenido a la API');
 });
+
+// Rutas de la API
+app.use('/api/bot', botRoutes);
 
 app.get('/api/test-socket', (req, res) => {
   const connectedClients = io.engine.clientsCount;

@@ -92,7 +92,7 @@ function generateAccessCode() {
 
 const registerUser = async (req, res) => {
   const {
-    role,           // role viene en el JSON
+    role = 'general', // Default to 'general' role for public registration
     username,
     password,
     firstName,
@@ -105,11 +105,13 @@ const registerUser = async (req, res) => {
   } = req.body;
 
   let newUser, newPerson;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    // 1️⃣ Validar rol
-    if (!['superadmin','admin','general'].includes(role)) {
-      return res.status(400).json({ message: 'Rol no válido' });
+    // 1️⃣ For public registration, only allow 'general' role
+    if (role !== 'general') {
+      return res.status(403).json({ message: 'Solo se permite registro con rol general' });
     }
 
     // 2️⃣ Campos básicos obligatorios
@@ -131,11 +133,8 @@ const registerUser = async (req, res) => {
     // 4️⃣ Hashear contraseña
     const hashed = await bcrypt.hash(password, 10);
 
-    // 5️⃣ Generar accessCode si aplica
-    let accessCode;
-    if (['admin','superadmin'].includes(role)) {
-      accessCode = generateAccessCode();
-    }
+    // 5️⃣ No access code for general users
+    const accessCode = null;
 
     // 6️⃣ Crear User
     newUser = await User.create({
@@ -147,7 +146,20 @@ const registerUser = async (req, res) => {
       createdBy:  null
     });
 
-    // 7️⃣ Crear Person
+    // 7️⃣ Create Person with additional validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'Formato de correo electrónico inválido' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
+    }
     newPerson = await Person.create({
       firstName,
       lastName,
@@ -162,8 +174,10 @@ const registerUser = async (req, res) => {
       createdBy:      null
     });
 
-    // 8️⃣ Vincular perfil
-    newUser.profileRef = newPerson._id;
+    // 8️⃣ Save within transaction
+    await Promise.all([newUser.save({ session }), newPerson.save({ session })]);
+    await session.commitTransaction();
+    session.endSession();
     await newUser.save();
 
     // 9️⃣ Respuesta: incluimos el accessCode generado
@@ -177,8 +191,13 @@ const registerUser = async (req, res) => {
 
   } catch (err) {
     console.error('Error en registro:', err);
-    if (newUser)   await User.deleteOne({ _id: newUser._id });
-    if (newPerson) await Person.deleteOne({ _id: newPerson._id });
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+    
+    if (newUser) await User.deleteOne({ _id: newUser._id }).catch(() => {});
+    if (newPerson) await Person.deleteOne({ _id: newPerson._id }).catch(() => {});
     return res.status(500).json({ message: 'Error interno del servidor', error: err.message });
   }
 };
