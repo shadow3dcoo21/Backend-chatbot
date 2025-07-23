@@ -1,7 +1,8 @@
 import axios from "axios";
-import { getAllMessages, getClient, saveIncomingMessage } from "./whatsapp.service.js";
-import { isChatbotActive } from "./configChatbot.service.js";
-import { obtenerRespuestaFAQ } from "../controllers/faq.controller.js"
+import { getClient, saveIncomingMessage, getAllMessages } from "./whatsapp.service.js";
+import { obtenerRespuestaFAQ } from '../controllers/faq.controller.js'
+import { isChatbotActive } from './configChatbot.service.js'
+import chatStateService from "./chatStateService.js";
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
@@ -42,49 +43,45 @@ function setupWhatsAppSocketBroadcast(userId) {
       mensaje: body,
       hora: new Date().toISOString(),
     };
-    // Consultar si el chatbot está activo para este usuario
-    const activo = await isChatbotActive(userId);
+    // Save and emit the message
     console.log("📩 Nuevo mensaje válido broadcast:", payload);
     global.io.to(userId).emit("new_message", payload);
-    if (!activo) {
-      saveIncomingMessage(userId, payload, null);
-      return;
-    }
-
-    // Consultar FAQ antes de seguir
-    const respuestaFAQ = obtenerRespuestaFAQ(body);
-    if (respuestaFAQ) {
-      console.log("Enviando respuesta de FAQ", respuestaFAQ)
-      await client.sendMessage(from, respuestaFAQ);
-      // global.io.to(userId).emit("new_bot_response", {
-      //   numero: from,
-      //   nombre: contact.pushname,
-      //   mensaje: respuestaFAQ,
-      //   hora: new Date().toISOString(),
-      //   tipo: "enviado"
-      // });
-      saveIncomingMessage(userId, payload, respuestaFAQ);
-      return;
-    }
 
     try {
-      const endpoint = process.env.N8N_WEBHOOK
-      const respuesta = await axios.post(endpoint, payload);
-      if (respuesta.data?.respuesta) {
-        console.log("Enviando mensaje", respuesta.data.respuesta)
-        await client.sendMessage(from, respuesta.data.respuesta);
+      // Get or initialize chat state for this chat
+      const chatState = await chatStateService.getChatState(userId, from);
+      const globalStateBot = await isChatbotActive(userId)
+      // Only process bot logic if active for this chat
+      if (chatState.botActive && globalStateBot) {
+        // Check FAQ first
+        const respuestaFAQ = obtenerRespuestaFAQ(body);
+        if (respuestaFAQ) {
+          console.log("Enviando respuesta de FAQ", respuestaFAQ);
+          await client.sendMessage(from, respuestaFAQ);
+          saveIncomingMessage(userId, payload, respuestaFAQ);
+          return;
+        }
 
-        // global.io.to(userId).emit("new_message", {
-        //   numero: from,
-        //   nombre: contact.pushname,
-        //   mensaje: respuesta.data.respuesta,
-        //   hora: new Date().toISOString(),
-        //   tipo: "enviado"
-        // });
-        console.log("Mensaje enviado")
-        saveIncomingMessage(userId, payload, respuesta.data.respuesta);
+        // Process with n8n webhook if no FAQ match
+        try {
+          const endpoint = process.env.N8N_WEBHOOK;
+          const respuesta = await axios.post(endpoint, payload);
+
+          if (respuesta.data?.respuesta) {
+            console.log("Enviando respuesta del bot:", respuesta.data.respuesta);
+            await client.sendMessage(from, respuesta.data.respuesta);
+            saveIncomingMessage(userId, payload, respuesta.data.respuesta);
+          } else {
+            saveIncomingMessage(userId, payload, null);
+          }
+        } catch (err) {
+          console.error("❌ Error en webhook:", err.message);
+          saveIncomingMessage(userId, payload, null);
+        }
       } else {
-        saveIncomingMessage(userId, payload, null);
+        // Bot is inactive for this chat, just save the message
+        console.log("Bot inactivo para este chat, solo guardando mensaje");
+        saveIncomingMessage(userId, { ...payload, tipo: "recibido" }, null);
       }
     } catch (err) {
       console.error("❌ Error conectando con n8n:", err.message);
