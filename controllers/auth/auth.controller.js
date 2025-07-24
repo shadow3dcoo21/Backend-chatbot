@@ -105,8 +105,6 @@ const registerUser = async (req, res) => {
   } = req.body;
 
   let newUser, newPerson;
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
     // 1️⃣ For public registration, only allow 'general' role
@@ -130,36 +128,34 @@ const registerUser = async (req, res) => {
     if (eExists) return res.status(400).json({ message: 'Email ya registrado' });
     if (dExists) return res.status(400).json({ message: 'DNI ya registrado' });
 
-    // 4️⃣ Hashear contraseña
-    const hashed = await bcrypt.hash(password, 10);
-
-    // 5️⃣ No access code for general users
-    const accessCode = null;
-
-    // 6️⃣ Crear User
-    newUser = await User.create({
-      username,
-      password:   hashed,
-      role,
-      status:     'active',
-      accessCode,          // undefined para 'general'
-      createdBy:  null
-    });
-
-    // 7️⃣ Create Person with additional validation
+    // 4️⃣ Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ message: 'Formato de correo electrónico inválido' });
     }
 
-    // Validate password strength
+    // 5️⃣ Validate password strength
     if (password.length < 8) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
     }
+
+    // 6️⃣ Hashear contraseña
+    const hashed = await bcrypt.hash(password, 10);
+
+    // 7️⃣ No access code for general users
+    const accessCode = null;
+
+    // 8️⃣ Crear User
+    newUser = await User.create({
+      username,
+      password: hashed,
+      role,
+      status: 'active',
+      accessCode,
+      createdBy: null
+    });
+
+    // 9️⃣ Crear Persona
     newPerson = await Person.create({
       firstName,
       lastName,
@@ -169,36 +165,46 @@ const registerUser = async (req, res) => {
       age,
       phone,
       associatedRole: role,
-      userRef:        newUser._id,
-      status:         'active',
-      createdBy:      null
+      userRef: newUser._id,
+      status: 'active',
+      createdBy: null
     });
 
-    // 8️⃣ Save within transaction
-    await Promise.all([newUser.save({ session }), newPerson.save({ session })]);
-    await session.commitTransaction();
-    session.endSession();
+    // 🔟 Actualizar el usuario con la referencia al perfil
+    newUser.profileRef = newPerson._id;
     await newUser.save();
 
-    // 9️⃣ Respuesta: incluimos el accessCode generado
+    // 🔟 Respuesta exitosa
     return res.status(201).json({
-      message:    'Usuario registrado exitosamente',
-      userId:     newUser._id,
-      personId:   newPerson._id,
-      role:       newUser.role,
-      accessCode: newUser.accessCode  // sólo para admin/superadmin
+      message: 'Usuario registrado exitosamente',
+      userId: newUser._id,
+      personId: newPerson._id,
+      role: newUser.role,
+      accessCode: newUser.accessCode,
+      profile: {
+        id: newPerson._id,
+        firstName: newPerson.firstName,
+        lastName: newPerson.lastName,
+        email: newPerson.email
+      }
     });
 
   } catch (err) {
     console.error('Error en registro:', err);
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    session.endSession();
     
-    if (newUser) await User.deleteOne({ _id: newUser._id }).catch(() => {});
-    if (newPerson) await Person.deleteOne({ _id: newPerson._id }).catch(() => {});
-    return res.status(500).json({ message: 'Error interno del servidor', error: err.message });
+    // Intentar limpiar en caso de error
+    const cleanup = [];
+    if (newUser) cleanup.push(User.deleteOne({ _id: newUser._id }).catch(console.error));
+    if (newPerson) cleanup.push(Person.deleteOne({ _id: newPerson._id }).catch(console.error));
+    
+    if (cleanup.length > 0) {
+      await Promise.all(cleanup);
+    }
+    
+    return res.status(500).json({ 
+      message: 'Error interno del servidor', 
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
   }
 };
 
