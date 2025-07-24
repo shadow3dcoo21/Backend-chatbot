@@ -10,28 +10,28 @@ export const setChatBotState = async (req, res) => {
   try {
     const { chatId, isActive } = req.body;
     const userId = req.user.id;
-    
+
     if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'isActive debe ser un valor booleano' 
+      return res.status(400).json({
+        success: false,
+        error: 'isActive debe ser un valor booleano'
       });
     }
-    
+
     // This will initialize the chat state if it doesn't exist
     const result = await chatStateService.setBotState(userId, chatId, isActive);
-    
-    res.json({ 
-      success: true, 
-      chatId, 
+
+    res.json({
+      success: true,
+      chatId,
       botActive: result,
       message: `Bot ${result ? 'activado' : 'desactivado'} para este chat`
     });
   } catch (error) {
     console.error('Error al cambiar el estado del bot:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };
@@ -45,21 +45,21 @@ export const toggleChatBotState = async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user.id;
-    
+
     // This will initialize the chat state if it doesn't exist
     const newState = await chatStateService.toggleBotState(userId, chatId);
-    
-    res.json({ 
-      success: true, 
-      chatId, 
+
+    res.json({
+      success: true,
+      chatId,
       botActive: newState,
       message: `Bot ${newState ? 'activado' : 'desactivado'} para este chat`
     });
   } catch (error) {
     console.error('Error al cambiar el estado del bot:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };
@@ -73,20 +73,20 @@ export const getChatBotState = async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user.id;
-    
+
     // This will initialize the chat state if it doesn't exist
     const isActive = await chatStateService.isBotActive(userId, chatId);
-    
-    res.json({ 
-      success: true, 
-      chatId, 
+
+    res.json({
+      success: true,
+      chatId,
       botActive: isActive
     });
   } catch (error) {
     console.error('Error al obtener el estado del bot:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };
@@ -99,10 +99,10 @@ export const getChatBotState = async (req, res) => {
 export const getAllChatStates = async (req, res) => {
   try {
     const userId = req.user.id;
-    const chats = chatStateService.getUserChats(userId);
-    
-    res.json({ 
-      success: true, 
+    const chats = await chatStateService.getUserChats(userId);
+
+    res.json({
+      success: true,
       chats: chats.map(([chatId, state]) => ({
         chatId,
         botActive: state.botActive,
@@ -111,10 +111,78 @@ export const getAllChatStates = async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error al obtener los chats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error('Error al obtener los estados de los chats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al obtener los estados de los chats'
+    });
+  }
+};
+
+/**
+ * @desc    Manually reactivate the bot for a specific chat
+ * @route   POST /api/bot/:chatId/reactivate
+ * @access  Private
+ */
+export const manualReactivateBot = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    await chatStateService.manualReactivate(userId, chatId);
+
+    res.json({
+      success: true,
+      chatId,
+      message: 'Chat reactivado manualmente',
+      botActive: true
+    });
+  } catch (error) {
+    console.error('Error al reactivar manualmente el bot:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al reactivar el bot manualmente'
+    });
+  }
+};
+
+/**
+ * @desc    Set bot state with auto-reactivation
+ * @route   POST /api/bot/:chatId/deactivate
+ * @access  Private
+ */
+export const setBotStateWithAutoReactivate = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { durationMinutes } = req.body;
+    const userId = req.user.id;
+
+    // Use provided duration or default to 2 minutes for testing
+    const deactivateDuration = durationMinutes
+      ? durationMinutes * 60 * 1000
+      : 60 * 60 * 1000;
+
+    // Set bot to inactive with auto-reactivation
+    await chatStateService.setBotState(
+      userId,
+      chatId,
+      false, // isActive = false
+      true,  // autoReactivate = true
+      deactivateDuration // custom duration
+    );
+
+    res.json({
+      success: true,
+      chatId,
+      message: `Bot desactivado. Se reactivará automáticamente en ${deactivateDuration / 60000} minutos.`,
+      botActive: false,
+      autoReactivationIn: deactivateDuration
+    });
+  } catch (error) {
+    console.error('Error al desactivar con reactivación automática:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al configurar la desactivación automática'
     });
   }
 };

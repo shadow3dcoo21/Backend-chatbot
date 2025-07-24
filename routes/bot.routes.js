@@ -4,7 +4,9 @@ import {
   setChatBotState, 
   toggleChatBotState, 
   getChatBotState,
-  getAllChatStates
+  getAllChatStates,
+  manualReactivateBot,
+  setBotStateWithAutoReactivate
 } from '../controllers/bot.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 
@@ -13,16 +15,30 @@ const router = express.Router();
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
+// ========================
+// 1. Obtener estados
+// ========================
+
 // Obtener todos los chats del usuario con sus estados
 router.get('/chats', getAllChatStates);
 
 // Obtener el estado del bot para un chat específico
 router.get('/:chatId/state', getChatBotState);
 
+// ========================
+// 2. Cambiar estado
+// ========================
+
 // Cambiar el estado del bot para un chat específico
 router.post('/state', setChatBotState);
 
 // Alternar el estado del bot para un chat específico
 router.post('/:chatId/toggle', toggleChatBotState);
+
+// Desactivar con reactivación automática después de X tiempo
+router.post('/:chatId/deactivate', setBotStateWithAutoReactivate);
+
+// Reactivar manualmente antes de que termine el tiempo
+router.post('/:chatId/reactivate', manualReactivateBot);
 
 export default router;
