@@ -1,9 +1,28 @@
 import express from 'express';
-import { createCompany } from '../controllers/company.controller.js';
+import {
+    createCompany,
+    getCompany,
+    updateCompany,
+    deleteCompany,
+    listMyCompanies
+} from '../controllers/company.controller.js';
+import authMiddleware from '../middlewares/authMiddleware.js';
+import { isCompanyOwner, isCompanyAdmin, isCompanyMember } from '../middlewares/permissionMiddleware.js';
 
 const router = express.Router();
 
-// Crear una nueva compañía
-router.post('/', createCompany);
+// Aplicar middleware de autenticación a todas las rutas
+router.use(authMiddleware);
 
-export default router; 
+
+
+// Rutas de compañía
+router.post('/', createCompany); // Cualquier usuario autenticado puede crear una compañía
+router.get('/my-companies', listMyCompanies); // Listar compañías del usuario actual
+
+// Rutas protegidas que requieren pertenecer a la compañía
+router.get('/:id', isCompanyMember, getCompany); // Ver detalles de la compañía (miembros activos)
+router.put('/:id', isCompanyAdmin, updateCompany); // Solo admin/owner pueden actualizar
+router.delete('/:id', isCompanyOwner, deleteCompany); // Solo el dueño puede eliminar
+
+export default router;

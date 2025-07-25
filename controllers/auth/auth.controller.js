@@ -107,7 +107,7 @@ function generateAccessCode() {
 
 const registerUser = async (req, res) => {
   const {
-    role = 'general', // Default to 'general' role for public registration
+    role = 'admin', // Default to 'general' role for public registration
     username,
     password,
     firstName,
@@ -124,8 +124,8 @@ const registerUser = async (req, res) => {
 
   try {
     // 1️⃣ For public registration, only allow 'general' role
-    if (role !== 'general') {
-      return res.status(403).json({ message: 'Solo se permite registro con rol general' });
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Solo se permite registro con rol admin' });
     }
 
     // 2️⃣ Campos básicos obligatorios
@@ -169,7 +169,6 @@ const registerUser = async (req, res) => {
       status: 'active',
       accessCode,
       createdBy: null,
-      companyRef: companyId || undefined // Asociar si viene, si no dejar undefined
     });
 
     // 9️⃣ Crear Persona
