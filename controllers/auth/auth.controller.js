@@ -36,7 +36,7 @@ const loginUser = async (req, res) => {
       }
     }
     */
-   
+
     // 4️⃣ Crear payload para JWT
     const payload = {
       id: user._id,
@@ -107,7 +107,7 @@ function generateAccessCode() {
 
 const registerUser = async (req, res) => {
   const {
-    role,           // role viene en el JSON
+    role = 'general', // Default to 'general' role for public registration
     username,
     password,
     firstName,
@@ -123,14 +123,14 @@ const registerUser = async (req, res) => {
   let newUser, newPerson;
 
   try {
-    // 1️⃣ Validar rol
-    if (!['superadmin','admin','general'].includes(role)) {
-      return res.status(400).json({ message: 'Rol no válido' });
+    // 1️⃣ For public registration, only allow 'general' role
+    if (role !== 'general') {
+      return res.status(403).json({ message: 'Solo se permite registro con rol general' });
     }
 
     // 2️⃣ Campos básicos obligatorios
     if (!username || !password || !firstName || !lastName ||
-        !sex || !email || !dni || !age || !phone) {
+      !sex || !email || !dni || !age || !phone) {
       return res.status(400).json({ message: 'Faltan campos obligatorios' });
     }
 
@@ -144,27 +144,35 @@ const registerUser = async (req, res) => {
     if (eExists) return res.status(400).json({ message: 'Email ya registrado' });
     if (dExists) return res.status(400).json({ message: 'DNI ya registrado' });
 
-    // 4️⃣ Hashear contraseña
-    const hashed = await bcrypt.hash(password, 10);
-
-    // 5️⃣ Generar accessCode si aplica
-    let accessCode;
-    if (['admin','superadmin'].includes(role)) {
-      accessCode = generateAccessCode();
+    // 4️⃣ Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Formato de correo electrónico inválido' });
     }
 
-    // 6️⃣ Crear User
+    // 5️⃣ Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
+    // 6️⃣ Hashear contraseña
+    const hashed = await bcrypt.hash(password, 10);
+
+    // 7️⃣ No access code for general users
+    const accessCode = null;
+
+    // 8️⃣ Crear User
     newUser = await User.create({
       username,
-      password:   hashed,
+      password: hashed,
       role,
-      status:     'active',
-      accessCode,          // undefined para 'general'
-      createdBy:  null,
+      status: 'active',
+      accessCode,
+      createdBy: null,
       companyRef: companyId || undefined // Asociar si viene, si no dejar undefined
     });
 
-    // 7️⃣ Crear Person
+    // 9️⃣ Crear Persona
     newPerson = await Person.create({
       firstName,
       lastName,
@@ -174,29 +182,46 @@ const registerUser = async (req, res) => {
       age,
       phone,
       associatedRole: role,
-      userRef:        newUser._id,
-      status:         'active',
-      createdBy:      null
+      userRef: newUser._id,
+      status: 'active',
+      createdBy: null
     });
 
-    // 8️⃣ Vincular perfil
+    // 🔟 Actualizar el usuario con la referencia al perfil
     newUser.profileRef = newPerson._id;
     await newUser.save();
 
-    // 9️⃣ Respuesta: incluimos el accessCode generado
+    // 🔟 Respuesta exitosa
     return res.status(201).json({
-      message:    'Usuario registrado exitosamente',
-      userId:     newUser._id,
-      personId:   newPerson._id,
-      role:       newUser.role,
-      accessCode: newUser.accessCode  // sólo para admin/superadmin
+      message: 'Usuario registrado exitosamente',
+      userId: newUser._id,
+      personId: newPerson._id,
+      role: newUser.role,
+      accessCode: newUser.accessCode,
+      profile: {
+        id: newPerson._id,
+        firstName: newPerson.firstName,
+        lastName: newPerson.lastName,
+        email: newPerson.email
+      }
     });
 
   } catch (err) {
     console.error('Error en registro:', err);
-    if (newUser)   await User.deleteOne({ _id: newUser._id });
-    if (newPerson) await Person.deleteOne({ _id: newPerson._id });
-    return res.status(500).json({ message: 'Error interno del servidor', error: err.message });
+
+    // Intentar limpiar en caso de error
+    const cleanup = [];
+    if (newUser) cleanup.push(User.deleteOne({ _id: newUser._id }).catch(console.error));
+    if (newPerson) cleanup.push(Person.deleteOne({ _id: newPerson._id }).catch(console.error));
+
+    if (cleanup.length > 0) {
+      await Promise.all(cleanup);
+    }
+
+    return res.status(500).json({
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -212,7 +237,7 @@ const getUserPermissions = (req, res) => {
     return res.json({
       userRole: req.user.role,
       canRegister,
-      message: canRegister.length > 0 
+      message: canRegister.length > 0
         ? `Puedes registrar: ${canRegister.join(', ')}`
         : 'No tienes permisos para registrar usuarios'
     });
@@ -254,7 +279,7 @@ const changePassword = async (req, res) => {
       if (!oldPassword) {
         return res.status(400).json({ message: "Contraseña actual es requerida" });
       }
-      
+
       const isMatch = await bcrypt.compare(oldPassword, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: "Contraseña actual incorrecta" });
@@ -268,7 +293,7 @@ const changePassword = async (req, res) => {
 
     // Validar fortaleza de contraseña
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    
+
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
         message: "La nueva contraseña debe contener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial"
@@ -301,9 +326,9 @@ const changePassword = async (req, res) => {
   }
 };
 
-export { 
+export {
   getUserPermissions,
-  changePassword ,
-  loginUser, 
+  changePassword,
+  loginUser,
   registerUser,
 };

@@ -6,8 +6,8 @@ const router = express.Router();
 //login
 router.post('/login', authController.loginUser);
 
-//register
-router.post('/register',  authMiddleware, middleware.validateRegistrationPermissions,authController.registerUser);
+// Public registration endpoint
+router.post('/register', authController.registerUser);
 
 // Ruta opcional para consultar permisos
 router.get('/permissions', authMiddleware, authController.getUserPermissions);

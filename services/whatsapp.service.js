@@ -36,6 +36,23 @@ function initializeWhatsappClient(userId) {
   client.on("disconnected", (reason) => {
     console.log(`🔌 Usuario ${userId} desconectado: ${reason}`);
     clients.delete(userId);
+    if (reason === "LOGOUT") {
+      // 1. Borrar carpeta de sesión
+      // const sessionPath = path.join(__dirname, '..', '.wwebjs_auth', `session-${userId}`);
+      // fs.rm(sessionPath, { recursive: true, force: true }, (err) => {
+      //   if (err) {
+      //     console.error(`Error al borrar la carpeta de sesión de ${userId}:`, err);
+      //   } else {
+      //     console.log(`Carpeta de sesión de ${userId} eliminada correctamente.`);
+      //   }
+      // });
+  
+      // Borrar mensajes del usuario
+      if (mensajesPorUsuario) { // Si usas un Map en memoria
+        mensajesPorUsuario.delete(userId);
+        console.log(`Mensajes de ${userId} eliminados de la memoria.`);
+      }
+    }
   });
 
  /* client.on("message", async (msg) => {

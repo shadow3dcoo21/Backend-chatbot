@@ -34,10 +34,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Importar rutas
+import botRoutes from './routes/bot.routes.js';
+
 // Rutas principales
 app.get('/', (req, res) => {
   res.status(200).send('Bienvenido a la API');
 });
+
+// Rutas de la API
+app.use('/api/bot', botRoutes);
 
 app.get('/api/test-socket', (req, res) => {
   const connectedClients = io.engine.clientsCount;
@@ -61,6 +67,7 @@ import whatsappStartRoutes from './routes/whatsapp/start.routes.js';
 import userRoutes from './routes/auth/user.routes.js';
 import companyRoutes from './routes/company.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import configChatbotRoutes from './routes/chat/configchatbot.routes.js';
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
@@ -71,6 +78,7 @@ app.use("/api/whatsapp/start", whatsappStartRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/configchatbot', configChatbotRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {

@@ -2,23 +2,13 @@
 
 import multer from "multer";
 import fs from "fs";
-import csv from "csv-parser";
+import { getClient, getAllMessages, saveIncomingMessage } from "../../services/whatsapp.service.js";
 import jwt from "jsonwebtoken";
-import {
-  getClient,
-  saveIncomingMessage,
-  getAllMessages,
-} from "../../services/whatsapp.service.js";
-
 const upload = multer({ dest: "mensajes/" });
-
-/**
- * Envío individual
- */
-import { getIO } from "../../websocket/socket.js"; 
+import chatStateService from "../../services/chatStateService.js";
 
 export const sendMessage = async (req, res) => {
-  const { numero, mensaje } = req.body;
+  const { numero, mensaje, isAutomated = false } = req.body;
 
   // 🔐 Extraer userId desde el token
   const authHeader = req.headers.authorization || "";
@@ -35,6 +25,23 @@ export const sendMessage = async (req, res) => {
   const chatId = numero.endsWith("@c.us") ? numero : numero + "@c.us";
 
   try {
+    // Verificar si el bot está activo antes de enviar mensajes automatizados
+    if (isAutomated) {
+      const isBotActive = await chatStateService.isBotActive(userId, chatId);
+      if (!isBotActive) {
+        console.log(`[MessageController] Bot inactivo para ${chatId}, omitiendo mensaje automatizado`);
+        return res.json({
+          status: "Mensaje automatizado omitido - Bot inactivo",
+          botActive: false
+        });
+      }
+    } else {
+      // Si es un mensaje manual, desactivar el bot por 1 hora
+      console.log(`[MessageController] Mensaje manual detectado, desactivando bot para ${chatId} por 1 hora`);
+      await chatStateService.setBotState(userId, chatId, false, true,); // 1 hora
+    }
+
+    // Enviar el mensaje
     await getClient(userId).sendMessage(chatId, mensaje);
 
     const payload = {
@@ -42,27 +49,31 @@ export const sendMessage = async (req, res) => {
       nombre: null,
       mensaje,
       hora: new Date().toISOString(),
+      isAutomated
     };
 
-    // 🧠 Guardar mensaje en memoria como "mensaje enviado"
-    saveIncomingMessage(userId, {
-      numero: chatId,
-      nombre: null,
-      mensaje,
-      hora: new Date().toISOString(),
-      tipo: "enviado", // 🆕
+    // // 🧠 Guardar mensaje en memoria
+    // saveIncomingMessage(userId, {
+    //   numero: chatId,
+    //   nombre: null,
+    //   mensaje,
+    //   hora: new Date().toISOString(),
+    //   tipo: isAutomated ? "automatizado" : "enviado",
+    // });
+
+    // // 🛰️ Emitir a WebSocket si está configurado
+    // const io = getIO();
+    // if (io) {
+    //   io.to("words_updates").emit("new_message", {
+    //     ...payload,
+    //     userId,
+    //   });
+    // }
+
+    return res.json({
+      status: "Mensaje enviado correctamente",
+      botActive: !isAutomated // Si es manual, el bot se desactiva
     });
-
-    // 🛰️ Emitirlo también a WebSocket para que aparezca en el chat
-    const io = getIO();
-    if (io) {
-      io.to("words_updates").emit("new_message", {
-        ...payload,
-        userId,
-      });
-    }
-
-    return res.json({ status: "Mensaje enviado correctamente" });
   } catch (err) {
     console.error("❌ Error al enviar mensaje:", err);
     return res.status(500).json({ error: err.message || "Error desconocido al enviar" });
@@ -81,18 +92,33 @@ export const sendMassiveMessagesFromCsv = [
       .pipe(csv())
       .on("data", (row) => contactos.push(row))
       .on("end", async () => {
-        for (const contacto of contactos) {
-          const numero = contacto.numero + "@c.us";
-          const mensaje = contacto.mensaje;
-          try {
-            await getClient().sendMessage(numero, mensaje);
-            console.log(`✅ Enviado a ${contacto.numero}`);
-          } catch (err) {
-            console.log(`❌ Error con ${contacto.numero}: ${err.message}`);
+        try {
+          for (const contacto of contactos) {
+            const numero = contacto.numero + "@c.us";
+            const mensaje = contacto.mensaje;
+
+            // Check if bot is active for this chat
+            const isBotActive = await chatStateService.isBotActive(userId, numero);
+
+            // If bot is not active and this is an automated message, don't send it
+            if (!isBotActive && req.body.isAutomated) {
+              console.log(`[ChatState] Message not sent - bot is inactive for chat ${numero}`);
+              continue;
+            }
+
+            try {
+              await getClient().sendMessage(numero, mensaje);
+              console.log(`✅ Enviado a ${contacto.numero}`);
+            } catch (err) {
+              console.log(`❌ Error con ${contacto.numero}: ${err.message}`);
+            }
+            await new Promise((r) => setTimeout(r, 1500));
           }
-          await new Promise((r) => setTimeout(r, 1500));
+          res.json({ status: "masivo CSV completado", total: contactos.length });
+        } catch (err) {
+          console.error("Error al enviar mensajes masivos:", err);
+          res.status(500).json({ error: "Error al enviar mensajes masivos" });
         }
-        res.json({ status: "masivo CSV completado", total: contactos.length });
       });
   },
 ];
