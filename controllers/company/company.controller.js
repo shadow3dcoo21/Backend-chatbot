@@ -1,6 +1,6 @@
-import Company from '../models/Company/Company.js';
-import User from '../models/Users/User.js';
-import { checkCompanyPermission } from '../middlewares/permissionMiddleware.js';
+import Company from '../../models/Company/Company.js';
+import User from '../../models/Users/User.js';
+import { checkCompanyPermission } from '../../middlewares/permissionMiddleware.js';
 
 // Crear una nueva compañía
 export const createCompany = async (req, res) => {

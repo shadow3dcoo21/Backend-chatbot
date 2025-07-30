@@ -5,7 +5,7 @@ import {
     updateCompany,
     deleteCompany,
     listMyCompanies
-} from '../controllers/company.controller.js';
+} from '../controllers/company/company.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import { isCompanyOwner, isCompanyAdmin, isCompanyMember } from '../middlewares/permissionMiddleware.js';
 

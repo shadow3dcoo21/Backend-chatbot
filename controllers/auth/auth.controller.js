@@ -18,7 +18,6 @@ const loginUser = async (req, res) => {
     // 1️⃣ Buscar usuario activo
     const user = await User.findOne({ username, status: 'active' })
       .populate('profileRef')
-      .populate('companyRef');
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado o cuenta inactiva' });
     }
@@ -49,12 +48,6 @@ const loginUser = async (req, res) => {
           lastName: user.profileRef.lastName,
           email: user.profileRef.email,
         }
-      }),
-      ...(user.companyRef && {
-        company: {
-          id: user.companyRef._id,
-          name: user.companyRef.name,
-        }
       })
     };
 
@@ -71,12 +64,6 @@ const loginUser = async (req, res) => {
         ...(user.profileRef && {
           firstName: user.profileRef.firstName,
           lastName: user.profileRef.lastName,
-        }),
-        ...(user.companyRef && {
-          company: {
-            id: user.companyRef._id,
-            name: user.companyRef.name,
-          }
         })
       }
     });
@@ -159,7 +146,7 @@ const registerUser = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
 
     // 7️⃣ No access code for general users
-    const accessCode = null;
+    const accessCode = generateAccessCode();
 
     // 8️⃣ Crear User
     newUser = await User.create({

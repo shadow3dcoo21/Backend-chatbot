@@ -100,22 +100,15 @@ const getUsers = async (req, res) => {
         path: 'profileRef',
         select: 'firstName lastName email dni age phone sex status'
       })
-      .populate('companyRef')
       .lean()
       .exec();
 
     // Formatear respuesta de manera más eficiente
     const formattedUsers = users.map(user => {
-      const { profileRef, companyRef, ...userData } = user;
+      const { profileRef, ...userData } = user;
       return {
         ...userData,
-        ...profileRef,
-        ...(companyRef && {
-          company: {
-            id: companyRef._id,
-            name: companyRef.name,
-          }
-        })
+        ...profileRef
       };
     });
 
@@ -158,7 +151,6 @@ const getUserById = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
-      .populate('companyRef')
       .lean();
 
     if (!user) {
@@ -166,16 +158,10 @@ const getUserById = async (req, res) => {
     }
 
     // Formatear respuesta
-    const { profileRef, companyRef, ...userData } = user;
+    const { profileRef, ...userData } = user;
     const formattedUser = {
       ...userData,
-      ...profileRef,
-      ...(companyRef && {
-        company: {
-          id: companyRef._id,
-          name: companyRef.name,
-        }
-      })
+      ...profileRef
     };
 
     // Log de auditoría
@@ -300,19 +286,12 @@ const updateUser = async (req, res) => {
         path: 'profileRef',
         select: 'firstName lastName email dni age phone sex status'
       })
-      .populate('companyRef')
       .lean();
 
-    const { profileRef, companyRef, ...userData } = finalUser;
+    const { profileRef, ...userData } = finalUser;
     const formattedUser = {
       ...userData,
       ...profileRef,
-      ...(companyRef && {
-        company: {
-          id: companyRef._id,
-          name: companyRef.name,
-        }
-      })
     };
 
     // Log de auditoría
@@ -403,23 +382,16 @@ const getMyProfile = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
-      .populate('companyRef')
       .lean();
 
     if (!user) {
       return res.status(404).json({ message: "Perfil no encontrado" });
     }
 
-    const { profileRef, companyRef, ...userData } = user;
+    const { profileRef, ...userData } = user;
     const formattedUser = {
       ...userData,
       ...profileRef,
-      ...(companyRef && {
-        company: {
-          id: companyRef._id,
-          name: companyRef.name,
-        }
-      })
     };
 
     return res.status(200).json({
@@ -461,7 +433,6 @@ const getUserByPersonId = async (req, res) => {
         path: 'profileRef',
         select: '-userRef -_id -createdAt -updatedAt -__v'
       })
-      .populate('companyRef')
       .lean();
 
     if (!user) {
@@ -469,16 +440,10 @@ const getUserByPersonId = async (req, res) => {
     }
 
     // Formatear respuesta
-    const { profileRef, companyRef, ...userData } = user;
+    const { profileRef, ...userData } = user;
     const formattedUser = {
       ...userData,
-      ...profileRef,
-      ...(companyRef && {
-        company: {
-          id: companyRef._id,
-          name: companyRef.name,
-        }
-      })
+      ...profileRef
     };
 
     // Log de auditoría

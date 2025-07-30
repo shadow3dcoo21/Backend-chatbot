@@ -17,9 +17,7 @@ const authMiddleware = (req, res, next) => {
       role: decoded.role,
       profile: decoded.profile,
       status: decoded.status,
-      ...(decoded.company && { company: decoded.company })
     };
-    //console.log("req user", req.user)
     next();
   } catch (error) {
     return res.status(400).json({ message: 'Token no válido o expirado' });
