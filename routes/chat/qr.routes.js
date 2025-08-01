@@ -4,6 +4,6 @@ import authenticate from "../../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", authenticate, getQrController);
+router.get("/:companyId", authenticate, getQrController);
 
 export default router;

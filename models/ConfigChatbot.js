@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const ConfigChatbotSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, unique: true },
   active: { type: Boolean, default: true }
 });
 

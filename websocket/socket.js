@@ -26,16 +26,20 @@ function setupWebSocket(server) {
   // Middleware para autenticar cada conexión con JWT
   io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
+    const companyId = socket.handshake.auth.companyId
     console.log("🧪 TOKEN RECIBIDO EN BACKEND:", token);
 
     if (!token) {
       console.log("❌ Token no proporcionado");
       return next(new Error("Token requerido"));
     }
-
+    if (!companyId) {
+      return next(new Error("ID de compañía requerido"));
+    }
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = decoded;
+      socket.companyId = companyId;
       console.log("🔓 Token válido, usuario autenticado:", decoded);
       next();
     } catch (error) {

@@ -4,7 +4,7 @@ import { getConfigChatbot, updateConfigChatbot } from '../../controllers/messagi
 
 const router = express.Router();
 
-router.get('/', authenticate, getConfigChatbot);
-router.put('/', authenticate, updateConfigChatbot);
+router.get('/:companyId', authenticate, getConfigChatbot);
+router.put('/:companyId', authenticate, updateConfigChatbot);
 
 export default router; 

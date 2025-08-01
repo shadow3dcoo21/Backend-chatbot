@@ -6,142 +6,111 @@ import fs from "fs";
 import path from "path";
 import { getIO } from "../websocket/socket.js";
 
-const clients = new Map(); // Aquí se guardan todos los clientes activos
-const qrCodes = new Map(); // Aquí se guarda el QR por usuario
-const mensajesPorUsuario = new Map(); // Aquí se guarda el historial por usuario
+const clients = new Map(); // Aquí se guardan todos los clientes activos por companyId
+const qrCodes = new Map(); // Aquí se guarda el QR por companyId
+const mensajesPorCompany = new Map(); // Aquí se guarda el historial por companyId
 
-function initializeWhatsappClient(userId) {
-  if (clients.has(userId)) {
-    return clients.get(userId); // Ya existe cliente para este usuario
+function initializeWhatsappClient(companyId) {
+  if (clients.has(companyId)) {
+    return clients.get(companyId); // Ya existe cliente para esta compañía
   }
 
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId: userId }),
+    authStrategy: new LocalAuth({ clientId: companyId }),
     puppeteer: { headless: true },
   });
+
   client.on("qr", async (qr) => {
     const qrImage = await qrcode.toDataURL(qr);
-    qrCodes.set(userId, qrImage);
-    console.log(`📸 QR generado para el usuario ${userId}`);
+    qrCodes.set(companyId, qrImage);
+    console.log(`📸 QR generado para la compañía ${companyId}`);
+
+    // Emitir QR a todos los usuarios de la compañía
+    const io = getIO();
+    if (io) {
+      io.to(`company_${companyId}`).emit("qr_updated", { qrImage, companyId });
+    }
   });
 
   client.on("ready", () => {
-    console.log(`✅ WhatsApp listo para el usuario ${userId}`);
+    console.log(`✅ WhatsApp listo para la compañía ${companyId}`);
   });
 
   client.on("authenticated", () => {
-    console.log(`🔐 Usuario ${userId} autenticado`);
+    console.log(`🔐 Compañía ${companyId} autenticada`);
+
+    // Notificar a todos los usuarios de la compañía
+    const io = getIO();
+    if (io) {
+      io.to(companyId).emit("whatsapp_authenticated", { companyId });
+    }
   });
 
   client.on("disconnected", (reason) => {
-    console.log(`🔌 Usuario ${userId} desconectado: ${reason}`);
-    clients.delete(userId);
+    console.log(`🔌 Compañía ${companyId} desconectada: ${reason}`);
+    clients.delete(companyId);
+
     if (reason === "LOGOUT") {
-      // 1. Borrar carpeta de sesión
-      // const sessionPath = path.join(__dirname, '..', '.wwebjs_auth', `session-${userId}`);
-      // fs.rm(sessionPath, { recursive: true, force: true }, (err) => {
-      //   if (err) {
-      //     console.error(`Error al borrar la carpeta de sesión de ${userId}:`, err);
-      //   } else {
-      //     console.log(`Carpeta de sesión de ${userId} eliminada correctamente.`);
-      //   }
-      // });
-  
-      // Borrar mensajes del usuario
-      if (mensajesPorUsuario) { // Si usas un Map en memoria
-        mensajesPorUsuario.delete(userId);
-        console.log(`Mensajes de ${userId} eliminados de la memoria.`);
+      // Borrar mensajes de la compañía
+      if (mensajesPorCompany) {
+        mensajesPorCompany.delete(companyId);
+        console.log(`Mensajes de compañía ${companyId} eliminados de la memoria.`);
       }
     }
-  });
 
- /* client.on("message", async (msg) => {
-    if (msg.isGroupMsg || msg.from === "status@broadcast") {
-      return;
-    }
-
-    const from = msg.from?.trim();
-    if (!/^[0-9]+@c\.us$/.test(from)) {
-      return;
-    }
-
-    const body = msg.body?.trim();
-    if (!body) {
-      return;
-    }
-
-    const contact = await msg.getContact();
-    const payload = {
-      numero: from,
-      nombre: contact.pushname || "Desconocido",
-      mensaje: body,
-      hora: new Date().toISOString(),
-      tipo: "recibido",
-    };
-
-    if (!mensajesPorUsuario.has(userId)) {
-      mensajesPorUsuario.set(userId, []);
-    }
-    mensajesPorUsuario.get(userId).push(payload);
-
+    // Notificar a todos los usuarios de la compañía
     const io = getIO();
     if (io) {
-      io.to("words_updates").emit("new_message", {
-        ...payload,
-        userId,
-      });
-      console.log("📩 Nuevo mensaje válido emitido a WebSocket:", payload);
-    } else {
-      console.warn("⚠️ WebSocket IO no inicializado");
+      io.to(companyId).emit("whatsapp_disconnected", { companyId, reason });
     }
   });
-*/
+
   client.initialize();
-  clients.set(userId, client);
+  clients.set(companyId, client);
   return client;
 }
 
-function getClient(userId) {
-  return clients.get(userId);
+function getClient(companyId) {
+  return clients.get(companyId);
 }
 
-async function getContacts(userId){
-  const client = clients.get(userId);
+async function getContacts(companyId) {
+  const client = clients.get(companyId);
   return await client.getContacts()
 }
 
-function isClientReady(userId) {
-  const client = clients.get(userId);
+function isClientReady(companyId) {
+  const client = clients.get(companyId);
   return client ? client.info?.wid?.user : false;
 }
 
-function getQrImage(userId) {
-  return qrCodes.get(userId);
+function getQrImage(companyId) {
+  return qrCodes.get(companyId);
 }
 
-function saveIncomingMessage(userId, payload, respuesta = null) {
+function saveIncomingMessage(companyId, payload, respuesta = null) {
   const entry = { ...payload, respuesta };
 
-  if (!mensajesPorUsuario.has(userId)) {
-    mensajesPorUsuario.set(userId, []);
+  if (!mensajesPorCompany.has(companyId)) {
+    mensajesPorCompany.set(companyId, []);
   }
 
-  mensajesPorUsuario.get(userId).push(entry);
+  mensajesPorCompany.get(companyId).push(entry);
 }
 
-function getAllMessages(userId) {
-  return mensajesPorUsuario.get(userId) || [];
+function getAllMessages(companyId) {
+  return mensajesPorCompany.get(companyId) || [];
 }
 
-function eliminarSesion(userId) {
-  const sessionPath = path.join(__dirname, "..", ".wwebjs_auth", userId);
+function eliminarSesion(companyId) {
+  const sessionPath = path.join(__dirname, "..", ".wwebjs_auth", companyId);
   if (fs.existsSync(sessionPath)) {
     fs.rmSync(sessionPath, { recursive: true, force: true });
-    console.log(`🧹 Sesión WhatsApp de ${userId} eliminada`);
+    console.log(`🧹 Sesión WhatsApp de compañía ${companyId} eliminada`);
   }
-  clients.delete(userId);
-  qrCodes.delete(userId);
-  mensajesPorUsuario.delete(userId);
+  clients.delete(companyId);
+  qrCodes.delete(companyId);
+  mensajesPorCompany.delete(companyId);
 }
 
 export {

@@ -8,19 +8,19 @@ import User from '../models/Users/User.js';
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
-function setupWhatsAppSocketBroadcast(userId) {
-  const client = getClient(userId);
+function setupWhatsAppSocketBroadcast(companyId) {
+  const client = getClient(companyId);
   if (!client) {
-    console.warn(`⚠️ Cliente WhatsApp no inicializado para ${userId}`);
+    console.warn(`⚠️ Cliente WhatsApp no inicializado para la compañia${companyId}`);
     return;
   }
 
   // ✅ Verificar si ya se registró el listener
-  if (listenersRegistrados.has(userId)) {
-    console.log(`ℹ️ Listener ya registrado para ${userId}`);
+  if (listenersRegistrados.has(companyId)) {
+    console.log(`ℹ️ Listener ya registrado para la compañia${companyId}`);
     return;
   }
-  listenersRegistrados.add(userId); // Marcar como registrado
+  listenersRegistrados.add(companyId); // Marcar como registrado
 
   client.on("message", async (msg) => {
     console.log("Mensaje", msg)
@@ -45,41 +45,26 @@ function setupWhatsAppSocketBroadcast(userId) {
       mensaje: body,
       hora: new Date().toISOString(),
     };
-
-    // Obtener companyId del usuario
-    let companyId = null;
-    try {
-      const user = await User.findById(userId).select('companyRef');
-      companyId = user?.companyRef;
-    } catch (err) {
-      console.error('No se pudo obtener companyId para el usuario:', err);
-    }
-
     // Comprobar si el número está excluido del flujo de n8n
-    let isExcluded = false;
-    if (companyId) {
-      const fromNumber = from.replace('@c.us', '');
-      const fromNumberContact = contact.number
-      console.log("Numero from Contact object:", fromNumberContact)
-      const contactDb = await Contact.findByCompanyAndNumber(companyId, fromNumber);
-      isExcluded = contactDb?.excludedFromN8n === true;
-    }
+    const fromNumber = from.replace('@c.us', '');
+    const contactDb = await Contact.findByCompanyAndNumber(companyId, fromNumber);
+    const isExcluded = contactDb?.excludedFromN8n === true;
 
     if (isExcluded) {
       // Solo almacenar y mostrar, NO enviar a n8n
-      saveIncomingMessage(userId, payload, null);
-      global.io.to(userId).emit("new_message", payload);
+      saveIncomingMessage(companyId, payload, null);
+      global.io.to(companyId).emit("new_message", payload);
       console.log(`Mensaje de ${from} excluido del flujo n8n para company ${companyId}`);
       return;
     }
 
     console.log("📩 Nuevo mensaje válido broadcast:", payload);
-    global.io.to(userId).emit("new_message", payload);
+    global.io.to(companyId).emit("new_message", payload);
 
     try {
       // Get or initialize chat state for this chat
-      const chatState = await chatStateService.getChatState(userId, from);
-      const globalStateBot = await isChatbotActive(userId)
+      const chatState = await chatStateService.getChatState(companyId, from);
+      const globalStateBot = await isChatbotActive(companyId)
       // Only process bot logic if active for this chat
       if (chatState.botActive && globalStateBot) {
         // Check FAQ first
@@ -87,7 +72,7 @@ function setupWhatsAppSocketBroadcast(userId) {
         if (respuestaFAQ) {
           console.log("Enviando respuesta de FAQ", respuestaFAQ);
           await client.sendMessage(from, respuestaFAQ);
-          saveIncomingMessage(userId, payload, respuestaFAQ);
+          saveIncomingMessage(companyId, payload, respuestaFAQ);
           return;
         }
 
@@ -99,24 +84,24 @@ function setupWhatsAppSocketBroadcast(userId) {
           if (respuesta.data?.respuesta) {
             console.log("Enviando respuesta del bot:", respuesta.data.respuesta);
             await client.sendMessage(from, respuesta.data.respuesta);
-            saveIncomingMessage(userId, payload, respuesta.data.respuesta);
+            saveIncomingMessage(companyId, payload, respuesta.data.respuesta);
           } else {
-            saveIncomingMessage(userId, payload, null);
+            saveIncomingMessage(companyId, payload, null);
           }
         } catch (err) {
           console.error("❌ Error en webhook:", err.message);
-          saveIncomingMessage(userId, payload, null);
+          saveIncomingMessage(companyId, payload, null);
         }
       } else {
         // Bot is inactive for this chat, just save the message
         console.log("Bot inactivo para este chat, solo guardando mensaje");
-        saveIncomingMessage(userId, { ...payload, tipo: "recibido" }, null);
+        saveIncomingMessage(companyId, { ...payload, tipo: "recibido" }, null);
       }
     } catch (err) {
       console.error("❌ Error conectando con n8n:", err.message);
-      saveIncomingMessage(userId, payload, null);
+      saveIncomingMessage(companyId, payload, null);
     }
-    console.log("Lista de mensajes", getAllMessages(userId))
+    console.log("Lista de mensajes", getAllMessages(companyId))
   });
 
   client.on("message_create", async (msg) => {
@@ -134,15 +119,15 @@ function setupWhatsAppSocketBroadcast(userId) {
       };
 
       // Guardar mensaje en memoria como "enviado"
-      saveIncomingMessage(userId, {
+      saveIncomingMessage(companyId, {
         ...payload,
         tipo: "enviado"
       });
 
       // Emitir a través de WebSocket
-      global.io.to(userId).emit("new_message", {
+      global.io.to(companyId).emit("new_message", {
         ...payload,
-        userId,
+        companyId,
         tipo: "enviado"
       });
     }

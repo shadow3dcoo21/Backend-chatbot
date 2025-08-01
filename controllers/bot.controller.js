@@ -8,8 +8,7 @@ import chatStateService from '../services/chatStateService.js';
  */
 export const setChatBotState = async (req, res) => {
   try {
-    const { chatId, isActive } = req.body;
-    const userId = req.user.id;
+    const { chatId, isActive, companyId } = req.body;
 
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
@@ -19,7 +18,7 @@ export const setChatBotState = async (req, res) => {
     }
 
     // This will initialize the chat state if it doesn't exist
-    const result = await chatStateService.setBotState(userId, chatId, isActive);
+    const result = await chatStateService.setBotState(companyId, chatId, isActive);
 
     res.json({
       success: true,
@@ -43,11 +42,10 @@ export const setChatBotState = async (req, res) => {
  */
 export const toggleChatBotState = async (req, res) => {
   try {
-    const { chatId } = req.params;
-    const userId = req.user.id;
+    const { chatId, companyId } = req.params;
 
     // This will initialize the chat state if it doesn't exist
-    const newState = await chatStateService.toggleBotState(userId, chatId);
+    const newState = await chatStateService.toggleBotState(companyId, chatId);
 
     res.json({
       success: true,
@@ -71,11 +69,10 @@ export const toggleChatBotState = async (req, res) => {
  */
 export const getChatBotState = async (req, res) => {
   try {
-    const { chatId } = req.params;
-    const userId = req.user.id;
+    const { chatId, companyId } = req.params;
 
     // This will initialize the chat state if it doesn't exist
-    const isActive = await chatStateService.isBotActive(userId, chatId);
+    const isActive = await chatStateService.isBotActive(companyId, chatId);
 
     res.json({
       success: true,
@@ -98,8 +95,8 @@ export const getChatBotState = async (req, res) => {
  */
 export const getAllChatStates = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const chats = await chatStateService.getUserChats(userId);
+    const companyId = req.user.id;
+    const chats = await chatStateService.getCompanyChats(companyId);
 
     res.json({
       success: true,
@@ -126,10 +123,9 @@ export const getAllChatStates = async (req, res) => {
  */
 export const manualReactivateBot = async (req, res) => {
   try {
-    const { chatId } = req.params;
-    const userId = req.user.id;
+    const { chatId, companyId } = req.params;
 
-    await chatStateService.manualReactivate(userId, chatId);
+    await chatStateService.manualReactivate(companyId, chatId);
 
     res.json({
       success: true,
@@ -153,9 +149,8 @@ export const manualReactivateBot = async (req, res) => {
  */
 export const setBotStateWithAutoReactivate = async (req, res) => {
   try {
-    const { chatId } = req.params;
+    const { chatId, companyId } = req.params;
     const { durationMinutes } = req.body;
-    const userId = req.user.id;
 
     // Use provided duration or default to 2 minutes for testing
     const deactivateDuration = durationMinutes
@@ -164,7 +159,7 @@ export const setBotStateWithAutoReactivate = async (req, res) => {
 
     // Set bot to inactive with auto-reactivation
     await chatStateService.setBotState(
-      userId,
+      companyId,
       chatId,
       false, // isActive = false
       true,  // autoReactivate = true

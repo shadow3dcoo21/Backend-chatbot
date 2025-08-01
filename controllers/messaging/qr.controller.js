@@ -1,16 +1,16 @@
 import { getQrImage, isClientReady } from "../../services/whatsapp.service.js";
 
 export const getQrController = (req, res) => {
-  const userId = req.user?.id;
-  if (!userId) {
-    return res.status(401).json({ message: "Usuario no autenticado" });
+  const companyId = req.params.companyId;
+  if (!companyId) {
+    return res.status(401).json({ message: "Se requiere id de compañia" });
   }
 
-  if (isClientReady(userId)) {
+  if (isClientReady(companyId)) {
     return res.json({ message: "Ya conectado" });
   }
 
-  const qr = getQrImage(userId);
+  const qr = getQrImage(companyId);
   if (!qr) return res.status(404).json({ message: "Esperando QR..." });
 
   res.json({ qr });
