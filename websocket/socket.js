@@ -50,25 +50,25 @@ function setupWebSocket(server) {
 
   // Evento de conexión por usuario
   io.on('connection', (socket) => {
-    const userId = socket.user.userId || "undefined";
-    console.log(`✅ Usuario conectado: ${userId} - Socket ID: ${socket.id}`);
+    const companyId = socket.companyId || "undefined";
+    console.log(`✅ Usuario conectado: ${companyId} - Socket ID: ${socket.id}`);
 
     socket.join('words_updates');
-    console.log(`Usuario ${userId} automáticamente unido a words_updates`);
+    console.log(`Usuario ${companyId} automáticamente unido a words_updates`);
 
     socket.on('join_words_room', () => {
       socket.join('words_updates');
-      console.log(`🟢 Usuario ${userId} se unió manualmente a words_updates`);
+      console.log(`🟢 Usuario ${companyId} se unió manualmente a words_updates`);
       socket.emit('joined_room', { room: 'words_updates', success: true });
     });
 
     socket.on('ping', (callback) => {
-      console.log(`📶 Ping recibido de ${userId}`);
+      console.log(`📶 Ping recibido de ${companyId}`);
       if (callback) callback('pong');
     });
 
     socket.on('test_connection', (data, callback) => {
-      console.log(`🧪 Test recibido de ${userId}:`, data);
+      console.log(`🧪 Test recibido de ${companyId}:`, data);
       const response = {
         message: 'Conexión WebSocket funcionando correctamente',
         timestamp: new Date().toISOString(),
@@ -79,11 +79,11 @@ function setupWebSocket(server) {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log(`❌ Usuario desconectado: ${userId} - Razón: ${reason}`);
+      console.log(`❌ Usuario desconectado: ${companyId} - Razón: ${reason}`);
     });
 
     socket.on('error', (error) => {
-      console.log(`❌ Error en socket ${userId}:`, error);
+      console.log(`❌ Error en socket ${companyId}:`, error);
     });
   });
 

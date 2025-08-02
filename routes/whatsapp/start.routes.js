@@ -7,9 +7,9 @@ import Company from '../../models/Company/Company.js';
 
 const router = express.Router();
 
-router.post('/', authenticate, async (req, res) => {
+router.post('/:companyId', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const { companyId } = req.body
+  const companyId = req.params.companyId
   if (!companyId) {
     return res.status(400).json({
       error: 'Es necesario especificar la compañia',

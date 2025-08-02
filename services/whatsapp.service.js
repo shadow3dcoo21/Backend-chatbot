@@ -28,7 +28,7 @@ function initializeWhatsappClient(companyId) {
     // Emitir QR a todos los usuarios de la compañía
     const io = getIO();
     if (io) {
-      io.to(`company_${companyId}`).emit("qr_updated", { qrImage, companyId });
+      io.to(companyId).emit("qr_updated", { qrImage, companyId });
     }
   });
 

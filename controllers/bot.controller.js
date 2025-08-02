@@ -8,7 +8,8 @@ import chatStateService from '../services/chatStateService.js';
  */
 export const setChatBotState = async (req, res) => {
   try {
-    const { chatId, isActive, companyId } = req.body;
+    const { chatId, isActive } = req.body;
+    const companyId = req.params.companyId
 
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
@@ -95,8 +96,8 @@ export const getChatBotState = async (req, res) => {
  */
 export const getAllChatStates = async (req, res) => {
   try {
-    const companyId = req.user.id;
-    const chats = await chatStateService.getCompanyChats(companyId);
+    const companyId = req.params.companyId
+    const chats = chatStateService.getCompanyChats(companyId);
 
     res.json({
       success: true,

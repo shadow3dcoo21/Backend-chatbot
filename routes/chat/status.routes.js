@@ -3,9 +3,9 @@ const router = express.Router();
 import authenticate from "../../middlewares/authMiddleware.js";
 import { isClientReady } from "../../services/whatsapp.service.js";
 
-router.get("/", authenticate, (req, res) => {
-  const userId = req.user.id;
-  const conectado = isClientReady(userId);
+router.get("/:companyId", authenticate, (req, res) => {
+  const companyId = req.params.companyId;
+  const conectado = isClientReady(companyId);
   res.json({ conectado });
 });
 

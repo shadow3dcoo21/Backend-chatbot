@@ -231,11 +231,6 @@ export const deleteCompany = [
         });
       }
 
-      // Aquí podrías agregar lógica adicional como:
-      // - Eliminar recursos asociados
-      // - Notificar a los miembros
-      // - Registrar la acción
-
       // Eliminar la compañía
       await Company.findByIdAndDelete(companyId);
 

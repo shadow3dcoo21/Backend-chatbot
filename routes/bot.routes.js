@@ -1,8 +1,8 @@
 // routes/bot.routes.js
 import express from 'express';
-import { 
-  setChatBotState, 
-  toggleChatBotState, 
+import {
+  setChatBotState,
+  toggleChatBotState,
   getChatBotState,
   getAllChatStates,
   manualReactivateBot,
@@ -20,25 +20,25 @@ router.use(authMiddleware);
 // ========================
 
 // Obtener todos los chats del usuario con sus estados
-router.get('/chats', getAllChatStates);
+router.get('/chats/:companyId', getAllChatStates);
 
 // Obtener el estado del bot para un chat específico
-router.get('/:chatId/state', getChatBotState);
+router.get('/:chatId/state/:companyId', getChatBotState);
 
 // ========================
 // 2. Cambiar estado
 // ========================
 
 // Cambiar el estado del bot para un chat específico
-router.post('/state', setChatBotState);
+router.post('/state/:companyId', setChatBotState);
 
 // Alternar el estado del bot para un chat específico
-router.post('/:chatId/toggle', toggleChatBotState);
+router.post('/:chatId/toggle/:companyId', toggleChatBotState);
 
 // Desactivar con reactivación automática después de X tiempo
-router.post('/:chatId/deactivate', setBotStateWithAutoReactivate);
+router.post('/:chatId/deactivate/:companyId', setBotStateWithAutoReactivate);
 
 // Reactivar manualmente antes de que termine el tiempo
-router.post('/:chatId/reactivate', manualReactivateBot);
+router.post('/:chatId/reactivate/:companyId', manualReactivateBot);
 
 export default router;

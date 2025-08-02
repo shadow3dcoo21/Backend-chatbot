@@ -9,25 +9,25 @@ import chatStateService from "../../services/chatStateService.js";
 
 export const sendMessage = async (req, res) => {
   const { numero, mensaje, isAutomated = false } = req.body;
-
+  const companyId = req.params.companyId
   // 🔐 Extraer userId desde el token
   const authHeader = req.headers.authorization || "";
   const token = authHeader.split(" ")[1];
 
-  let userId;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    userId = decoded.userId || decoded.id;
-  } catch (err) {
-    return res.status(401).json({ error: "Token inválido o expirado" });
-  }
+  // let userId;
+  // try {
+  //   const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  //   userId = decoded.userId || decoded.id;
+  // } catch (err) {
+  //   return res.status(401).json({ error: "Token inválido o expirado" });
+  // }
 
   const chatId = numero.endsWith("@c.us") ? numero : numero + "@c.us";
 
   try {
     // Verificar si el bot está activo antes de enviar mensajes automatizados
     if (isAutomated) {
-      const isBotActive = await chatStateService.isBotActive(userId, chatId);
+      const isBotActive = await chatStateService.isBotActive(companyId, chatId);
       if (!isBotActive) {
         console.log(`[MessageController] Bot inactivo para ${chatId}, omitiendo mensaje automatizado`);
         return res.json({
@@ -38,11 +38,11 @@ export const sendMessage = async (req, res) => {
     } else {
       // Si es un mensaje manual, desactivar el bot por 1 hora
       console.log(`[MessageController] Mensaje manual detectado, desactivando bot para ${chatId} por 1 hora`);
-      await chatStateService.setBotState(userId, chatId, false, true,); // 1 hora
+      await chatStateService.setBotState(companyId, chatId, false, true,); // 1 hora
     }
 
     // Enviar el mensaje
-    await getClient(userId).sendMessage(chatId, mensaje);
+    await getClient(companyId).sendMessage(chatId, mensaje);
 
     const payload = {
       numero: chatId,
@@ -87,6 +87,7 @@ export const sendMassiveMessagesFromCsv = [
   (req, res) => {
     const ruta = req.file.path;
     const contactos = [];
+    const companyId = req.params.companyId
 
     fs.createReadStream(ruta)
       .pipe(csv())
@@ -98,7 +99,7 @@ export const sendMassiveMessagesFromCsv = [
             const mensaje = contacto.mensaje;
 
             // Check if bot is active for this chat
-            const isBotActive = await chatStateService.isBotActive(userId, numero);
+            const isBotActive = await chatStateService.isBotActive(companyId, numero);
 
             // If bot is not active and this is an automated message, don't send it
             if (!isBotActive && req.body.isAutomated) {
@@ -107,7 +108,7 @@ export const sendMassiveMessagesFromCsv = [
             }
 
             try {
-              await getClient().sendMessage(numero, mensaje);
+              await getClient(companyId).sendMessage(numero, mensaje);
               console.log(`✅ Enviado a ${contacto.numero}`);
             } catch (err) {
               console.log(`❌ Error con ${contacto.numero}: ${err.message}`);
@@ -130,6 +131,7 @@ export const sendMassiveMessagesFromTxt = [
   multer({ dest: "mensajes_txt/" }).single("archivoTxt"),
   async (req, res) => {
     try {
+      const companyId = req.params.companyId
       const filePath = req.file.path;
       const contenido = fs.readFileSync(filePath, "utf-8");
       const lineas = contenido
@@ -147,7 +149,7 @@ export const sendMassiveMessagesFromTxt = [
 
         const numero = numeroRaw + "@c.us";
         try {
-          await getClient().sendMessage(numero, mensajeRaw);
+          await getClient(companyId).sendMessage(numero, mensajeRaw);
           enviados++;
           console.log(`✅ [TXT] Enviado a ${numeroRaw}`);
         } catch (err) {
@@ -171,8 +173,9 @@ export const sendMassiveMessagesFromTxt = [
  *   o también: "51987654321,51912345678,51911122233"
  */
 export const sendMassiveMessagesFromList = async (req, res) => {
+  const companyId = req.params.companyId
+  const { numeros, mensaje } = req.body;
   try {
-    const { numeros, mensaje } = req.body;
     if (!numeros || !mensaje) {
       return res
         .status(400)
@@ -206,7 +209,7 @@ export const sendMassiveMessagesFromList = async (req, res) => {
     listaNumeros = Array.from(new Set(listaNumeros));
 
     // 2. Enviar el mismo mensaje a cada número (añadiendo el sufijo "@c.us")
-    const client = getClient();
+    const client = getClient(companyId);
     let enviados = 0;
 
     for (const numeroRaw of listaNumeros) {
@@ -238,12 +241,12 @@ export const sendMassiveMessagesFromList = async (req, res) => {
 export const getReceivedMessages = (req, res) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.split(" ")[1];
-
+  const companyId = req.params.companyId;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId || decoded.id;
 
-    const mensajes = getAllMessages(userId);
+
+    const mensajes = getAllMessages(companyId);
     return res.json(mensajes.slice(-100).reverse());
   } catch (err) {
     return res.status(401).json({ error: "Token inválido o expirado" });

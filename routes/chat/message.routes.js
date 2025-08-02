@@ -4,17 +4,17 @@ const router = express.Router();
 
 import { sendMessage, sendMassiveMessagesFromCsv, sendMassiveMessagesFromTxt, sendMassiveMessagesFromList, getReceivedMessages } from "../../controllers/messaging/message.controller.js";
 
-router.post("/send", sendMessage);
+router.post("/send/:companyId", sendMessage);
 
 // masivo desde CSV
-router.post("/massive", sendMassiveMessagesFromCsv);
+router.post("/massive/:companyId", sendMassiveMessagesFromCsv);
 
 // masivo desde TXT
-router.post("/massive-txt", sendMassiveMessagesFromTxt);
+router.post("/massive-txt/:companyId", sendMassiveMessagesFromTxt);
 
 // masivo desde lista de números + texto único
-router.post("/massive-list", sendMassiveMessagesFromList);
+router.post("/massive-list/:companyId", sendMassiveMessagesFromList);
 
-router.get("/received", getReceivedMessages);
+router.get("/received/:companyId", getReceivedMessages);
 
 export default router;
