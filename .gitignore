@@ -20,3 +20,8 @@ nginx/
 
 .wwebjs_auth/
 .wwebjs_cache/
+
+# Directorio de uploads temporales
+uploads/
+# Mantener la estructura pero ignorar archivos de imágenes
+uploads/companies/

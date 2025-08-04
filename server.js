@@ -33,6 +33,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Importar rutas
 import botRoutes from './routes/bot.routes.js';
@@ -104,7 +105,7 @@ io.on('connection', (socket) => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3005;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
   console.log(`📡 WebSocket disponible en ws://localhost:${PORT}`);

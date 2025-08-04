@@ -1,6 +1,12 @@
 import Company from '../../models/Company/Company.js';
 import User from '../../models/Users/User.js';
 import { checkCompanyPermission } from '../../middlewares/permissionMiddleware.js';
+import { 
+  getImageUrl, 
+  deleteLocalImage, 
+  isValidLocalImageUrl, 
+  extractFilenameFromUrl 
+} from '../../util/localImageUpload.js';
 
 // Crear una nueva compañía
 export const createCompany = async (req, res) => {
@@ -8,7 +14,6 @@ export const createCompany = async (req, res) => {
   try {
     const {
       name,
-      image = '',
       sector,
       email,
       phone,
@@ -17,6 +22,16 @@ export const createCompany = async (req, res) => {
       employeeCount = 0
     } = req.body;
     const userId = req.user.id;
+    
+    // Manejar imagen si se subió un archivo
+    let imageUrl = '';
+    if (req.file) {
+      // Generar URL local para la imagen
+      imageUrl = getImageUrl(req.file.filename);
+    }
+    
+    // Si no hay archivo, usar imagen del body o string vacío
+    const image = req.body.image || imageUrl || '';
 
     // Verificar si el usuario ya es dueño de otra compañía
     const existingCompany = await Company.findOne({
@@ -27,7 +42,9 @@ export const createCompany = async (req, res) => {
 
     if (existingCompany) {
       return res.status(400).json({
-        error: 'Ya eres dueño de otra compañía'
+        success: false,
+        error: 'Ya eres dueño de otra compañía',
+        code: 'COMPANY_OWNERSHIP_CONFLICT'
       });
     }
 
@@ -144,7 +161,6 @@ export const updateCompany = [
     try {
       const {
         name,
-        image,
         sector,
         email,
         phone,
@@ -157,13 +173,48 @@ export const updateCompany = [
 
       // Solo permitir actualizar campos permitidos
       if (name) updates.name = name.trim();
-      if (image !== undefined) updates.image = image;
       if (sector !== undefined) updates.sector = sector;
       if (email !== undefined) updates.email = email;
       if (phone !== undefined) updates.phone = phone;
       if (address !== undefined) updates.address = address;
       if (location !== undefined) updates.location = location;
       if (employeeCount !== undefined) updates.employeeCount = employeeCount;
+
+      // Obtener la compañía actual para manejar la imagen
+      const currentCompany = await Company.findById(req.params.id);
+      if (!currentCompany) {
+        return res.status(404).json({
+          success: false,
+          error: 'Compañía no encontrada',
+          code: 'COMPANY_NOT_FOUND'
+        });
+      }
+
+             // Manejar imagen si se subió un archivo
+       if (req.file) {
+         try {
+           // Eliminar imagen anterior si existe
+           if (currentCompany.image && isValidLocalImageUrl(currentCompany.image)) {
+             const oldFilename = extractFilenameFromUrl(currentCompany.image);
+             await deleteLocalImage(oldFilename);
+           }
+           
+           // Generar URL para la nueva imagen
+           const imageUrl = getImageUrl(req.file.filename);
+           updates.image = imageUrl;
+         } catch (uploadError) {
+           console.error('Error al procesar imagen:', uploadError);
+           return res.status(500).json({
+             success: false,
+             error: 'Error al procesar la imagen',
+             code: 'IMAGE_UPLOAD_ERROR',
+             details: process.env.NODE_ENV === 'development' ? uploadError.message : undefined
+           });
+         }
+       } else if (req.body.image !== undefined) {
+         // Si se proporciona una URL de imagen en el body
+         updates.image = req.body.image;
+       }
 
       const company = await Company.findByIdAndUpdate(
         req.params.id,
@@ -172,14 +223,6 @@ export const updateCompany = [
       )
         .populate('members.userId', 'username email')
         .populate('members.invitedBy', 'username');
-
-      if (!company) {
-        return res.status(404).json({
-          success: false,
-          error: 'Compañía no encontrada',
-          code: 'COMPANY_NOT_FOUND'
-        });
-      }
 
       return res.json({
         success: true,
@@ -231,14 +274,20 @@ export const deleteCompany = [
         });
       }
 
-      // Eliminar la compañía
-      await Company.findByIdAndDelete(companyId);
+             // Eliminar imagen de la compañía si existe
+       if (company.image && isValidLocalImageUrl(company.image)) {
+         const filename = extractFilenameFromUrl(company.image);
+         await deleteLocalImage(filename);
+       }
 
-      // Actualizar referencias en los usuarios
-      await User.updateMany(
-        { 'companies': companyId },
-        { $pull: { companies: companyId } }
-      );
+       // Eliminar la compañía
+       await Company.findByIdAndDelete(companyId);
+
+       // Actualizar referencias en los usuarios
+       await User.updateMany(
+         { 'companies': companyId },
+         { $pull: { companies: companyId } }
+       );
 
       return res.json({
         success: true,
@@ -267,7 +316,7 @@ export const listMyCompanies = async (req, res) => {
       'members.userId': userId,
       'members.status': 'active'
     })
-      .select('name image members.role members.status createdAt updatedAt')
+      .select('name image sector email phone address location employeeCount members.role members.status')
       .populate({
         path: 'members.userId',
         match: { _id: userId },
@@ -285,13 +334,19 @@ export const listMyCompanies = async (req, res) => {
       return {
         _id: company._id,
         name: company.name,
+        sector: company.sector,
+        email: company.email,
+        phone: company.phone,
+        address: company.address,
+        location: company.location,
+        employeeCount: company.employeeCount,
         image: company.image,
         role: userMembership?.role,
         status: userMembership?.status,
         joinedAt: userMembership?.joinedAt,
-        memberCount: company.members.length,
-        createdAt: company.createdAt,
-        updatedAt: company.updatedAt
+        //memberCount: company.members.length,
+        //createdAt: company.createdAt,
+        //updatedAt: company.updatedAt
       };
     });
 
