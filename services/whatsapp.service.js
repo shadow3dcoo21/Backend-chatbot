@@ -17,13 +17,8 @@ function initializeWhatsappClient(userId) {
 
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: userId }),
-    puppeteer: {
-    headless: true,
-    executablePath: '/usr/bin/google-chrome',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'] // 👈 MUY IMPORTANTE EN SERVIDORES
-  }
+    puppeteer: { headless: true },
   });
-
 
   client.on("qr", async (qr) => {
     const qrImage = await qrcode.toDataURL(qr);
