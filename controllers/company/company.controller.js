@@ -1,5 +1,6 @@
 import Company from '../../models/Company/Company.js';
 import User from '../../models/Users/User.js';
+import Product from '../../models/Product/Product.js';
 import { checkCompanyPermission } from '../../middlewares/permissionMiddleware.js';
 import { 
   getImageUrl, 
@@ -279,6 +280,10 @@ export const deleteCompany = [
          const filename = extractFilenameFromUrl(company.image);
          await deleteLocalImage(filename);
        }
+
+       // Eliminar todos los productos asociados a la compañía
+       const deletedProducts = await Product.deleteMany({ company: companyId });
+       console.log(`🗑️ Eliminados ${deletedProducts.deletedCount} productos de la compañía ${companyId}`);
 
        // Eliminar la compañía
        await Company.findByIdAndDelete(companyId);
