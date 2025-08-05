@@ -9,11 +9,18 @@ export const createProduct = async (req, res, next) => {
         const { company } = req; // Obtenido del middleware canHandleProducts
         const userId = req.user.id;
 
+        // Si se subió una imagen, agregar la ruta al campo image
+        let imagePath = undefined;
+        if (req.file) {
+            imagePath = `/uploads/companies/${req.file.filename}`;
+        }
+
         const productData = {
             ...req.body,
             company: company._id,
             createdBy: userId,
-            updatedBy: userId
+            updatedBy: userId,
+            ...(imagePath && { image: imagePath })
         };
 
         const product = new Product(productData);
@@ -99,9 +106,16 @@ export const updateProduct = async (req, res, next) => {
         const { id } = req.params;
         const userId = req.user.id;
 
+        // Si se subió una imagen, actualizar el campo image
+        let imagePath = undefined;
+        if (req.file) {
+            imagePath = `/uploads/companies/${req.file.filename}`;
+        }
+
         const updates = {
             ...req.body,
-            updatedBy: userId
+            updatedBy: userId,
+            ...(imagePath && { image: imagePath })
         };
 
         const product = await Product.findByIdAndUpdate(
