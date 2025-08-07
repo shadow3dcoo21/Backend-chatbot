@@ -92,11 +92,35 @@ app.use((err, req, res, next) => {
   });
 });
 
-// WebSocket personal por usuario (registro de salas)
+// Importar el modelo de Compañía para validaciones
+import Company from './models/Company/Company.js';
+
+// WebSocket con registro de usuarios y compañías
 io.on('connection', (socket) => {
-  socket.on('register', (userId) => {
-    console.log(`📡 Usuario ${userId} registrado en sala WebSocket`);
-    socket.join(userId); // Cada usuario tiene su propia sala
+  // Registrar un usuario en una sala de compañía
+  socket.on('register', async ({ userId, companyId }) => {
+    try {
+      if (!userId || !companyId) {
+        console.warn('Intento de registro sin userId o companyId');
+      }
+
+      // Verificar que el usuario pertenezca a la compañía
+      const company = await Company.findOne({
+        _id: companyId,
+        'members.userId': userId,
+        'members.status': 'active'
+      });
+
+      if (!company) {
+        console.warn(`Usuario ${userId} intentó registrarse en compañía no autorizada ${companyId}`);
+      }
+
+      // Unirse a la sala de la compañía
+      socket.join(companyId);
+
+    } catch (error) {
+      console.error('Error en registro de WebSocket:', error);
+    }
   });
 
   socket.on('disconnect', () => {
