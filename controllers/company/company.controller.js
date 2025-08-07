@@ -1,6 +1,7 @@
 import Company from '../../models/Company/Company.js';
 import User from '../../models/Users/User.js';
 import Product from '../../models/Product/Product.js';
+import Promo from '../../models/Promo/Promo.js';
 import { checkCompanyPermission } from '../../middlewares/permissionMiddleware.js';
 import { 
   getImageUrl, 
@@ -284,6 +285,10 @@ export const deleteCompany = [
        // Eliminar todos los productos asociados a la compañía
        const deletedProducts = await Product.deleteMany({ company: companyId });
        console.log(`🗑️ Eliminados ${deletedProducts.deletedCount} productos de la compañía ${companyId}`);
+
+       // Eliminar todas las promociones asociadas a la compañía
+       const deletedPromos = await Promo.deleteMany({ company: companyId });
+       console.log(`🗑️ Eliminadas ${deletedPromos.deletedCount} promociones de la compañía ${companyId}`);
 
        // Eliminar la compañía
        await Company.findByIdAndDelete(companyId);

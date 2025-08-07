@@ -70,6 +70,8 @@ import companyRoutes from './routes/company.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import configChatbotRoutes from './routes/chat/configchatbot.routes.js';
 import productRoutes from './routes/product.routes.js';
+import promoRoutes from './routes/promo.routes.js';
+import reservationRoutes from './routes/reservation.routes.js';
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
@@ -82,6 +84,8 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/promos', promoRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {

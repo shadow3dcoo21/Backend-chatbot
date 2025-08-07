@@ -161,10 +161,156 @@ const canHandleProducts = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware para verificar permisos de gestión de promociones
+ * Permite acceso a admins y miembros con permiso canHandlePromos
+ */
+const canHandlePromos = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const companyId = req.body.companyId || req.query.companyId;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere el ID de la compañía',
+        code: 'COMPANY_ID_REQUIRED'
+      });
+    }
+
+    // Buscar la compañía con los miembros relevantes
+    const company = await Company.findOne({
+      _id: companyId,
+      'members.userId': id,
+      'members.status': 'active'
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        error: 'Compañía no encontrada o no tienes acceso',
+        code: 'COMPANY_NOT_FOUND'
+      });
+    }
+
+    // Encontrar el miembro actual
+    const member = company.members.find(m =>
+      m.userId.toString() === id.toString()
+    );
+
+    if (!member) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar promociones',
+        code: 'PROMO_MANAGEMENT_FORBIDDEN'
+      });
+    }
+
+    // Verificar si es admin o tiene permiso canHandlePromos
+    const isAdmin = ['owner', 'admin'].includes(member.role);
+    const hasPromoPermission = member.permissions?.canHandlePromos === true;
+
+    if (!isAdmin && !hasPromoPermission) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar promociones',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      });
+    }
+
+    // Agregar información de la compañía al request para su uso posterior
+    req.company = company;
+    req.member = member;
+    next();
+  } catch (error) {
+    console.error('Error en verificación de permisos de promociones:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al verificar permisos',
+      code: 'PERMISSION_CHECK_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Middleware para verificar permisos de gestión de reservas
+ * Permite acceso a admins y miembros con permiso canHandleReservas
+ */
+const canHandleReservas = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const companyId = req.body.companyId || req.query.companyId;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere el ID de la compañía',
+        code: 'COMPANY_ID_REQUIRED'
+      });
+    }
+
+    // Buscar la compañía con los miembros relevantes
+    const company = await Company.findOne({
+      _id: companyId,
+      'members.userId': id,
+      'members.status': 'active'
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        error: 'Compañía no encontrada o no tienes acceso',
+        code: 'COMPANY_NOT_FOUND'
+      });
+    }
+
+    // Encontrar el miembro actual
+    const member = company.members.find(m =>
+      m.userId.toString() === id.toString()
+    );
+
+    if (!member) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar reservas',
+        code: 'RESERVATION_MANAGEMENT_FORBIDDEN'
+      });
+    }
+
+    // Verificar si es admin o tiene permiso canHandleReservas
+    const isAdmin = ['owner', 'admin'].includes(member.role);
+    const hasReservaPermission = member.permissions?.canHandleReservas === true;
+
+    if (!isAdmin && !hasReservaPermission) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar reservas',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      });
+    }
+
+    // Agregar información de la compañía al request para su uso posterior
+    req.company = company;
+    req.member = member;
+    next();
+  } catch (error) {
+    console.error('Error en verificación de permisos de reservas:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al verificar permisos',
+      code: 'PERMISSION_CHECK_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export {
   checkCompanyPermission,
   isCompanyOwner,
   isCompanyAdmin,
   isCompanyMember,
-  canHandleProducts
+  canHandleProducts,
+  canHandlePromos,
+  canHandleReservas
 };

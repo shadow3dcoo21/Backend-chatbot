@@ -54,6 +54,8 @@ function setupWhatsAppSocketBroadcast(companyId) {
       // Solo almacenar y mostrar, NO enviar a n8n
       saveIncomingMessage(companyId, payload, null);
       global.io.to(companyId).emit("new_message", payload);
+      console.log("emisión de evento para companyid:", companyId)
+      console.log("emisión de evento para payload:", payload)
       console.log(`Mensaje de ${from} excluido del flujo n8n para company ${companyId}`);
       return;
     }
@@ -62,17 +64,24 @@ function setupWhatsAppSocketBroadcast(companyId) {
     global.io.to(companyId).emit("new_message", payload);
 
     try {
-      // Get or initialize chat state for this chat
       const chatState = await chatStateService.getChatState(companyId, from);
       const globalStateBot = await isChatbotActive(companyId)
-      // Only process bot logic if active for this chat
       if (chatState.botActive && globalStateBot) {
-        // Check FAQ first
         const respuestaFAQ = obtenerRespuestaFAQ(body);
         if (respuestaFAQ) {
           console.log("Enviando respuesta de FAQ", respuestaFAQ);
           await client.sendMessage(from, respuestaFAQ);
           saveIncomingMessage(companyId, payload, respuestaFAQ);
+          const sentPayload = {
+            numero: from,
+            nombre: null,
+            mensaje: respuestaFAQ,
+            hora: new Date().toISOString(),
+            tipo: "enviado"
+          };
+          global.io.to(companyId).emit("new_message", sentPayload);
+          console.log("emisión de evento para companyid:", companyId)
+          console.log("emisión de evento para payload:", sentPayload)
           return;
         }
 
@@ -85,6 +94,18 @@ function setupWhatsAppSocketBroadcast(companyId) {
             console.log("Enviando respuesta del bot:", respuesta.data.respuesta);
             await client.sendMessage(from, respuesta.data.respuesta);
             saveIncomingMessage(companyId, payload, respuesta.data.respuesta);
+
+            // Emitir mensaje enviado al socket
+            const sentPayload = {
+              numero: from,
+              nombre: null,
+              mensaje: respuesta.data.respuesta,
+              hora: new Date().toISOString(),
+              tipo: "enviado"
+            };
+            global.io.to(companyId).emit("new_message", sentPayload);
+            console.log("emisión de evento para companyid:", companyId)
+            console.log("emisión de evento para payload:", sentPayload)
           } else {
             saveIncomingMessage(companyId, payload, null);
           }
@@ -106,7 +127,7 @@ function setupWhatsAppSocketBroadcast(companyId) {
 
   client.on("message_create", async (msg) => {
     if (msg.fromMe) {
-      console.log("Mensaje propio", msg)
+      console.log("Mensaje propio", msg.body)
       const chat = await msg.getChat();
       const contact = await msg.getContact();
       const chatId = chat.id._serialized;
@@ -130,6 +151,8 @@ function setupWhatsAppSocketBroadcast(companyId) {
         companyId,
         tipo: "enviado"
       });
+      console.log("emisión de evento para companyid:", companyId)
+      console.log("emisión de evento para payload:", payload)
     }
   })
 }

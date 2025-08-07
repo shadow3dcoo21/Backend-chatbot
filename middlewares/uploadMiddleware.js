@@ -36,7 +36,7 @@ const upload = multer({
 });
 
 // Middleware para subir imagen de compañía
-export const uploadCompanyImage = upload.single('image');
+export const uploadCompanyImage = upload.single('img');
 
 // Middleware para manejar errores de multer
 export const handleUploadError = (err, req, res, next) => {
