@@ -72,6 +72,7 @@ import configChatbotRoutes from './routes/chat/configchatbot.routes.js';
 import productRoutes from './routes/product.routes.js';
 import promoRoutes from './routes/promo.routes.js';
 import reservationRoutes from './routes/reservation.routes.js';
+import n8nRoutes from './routes/n8n.routes.js';
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
@@ -86,6 +87,7 @@ app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/reservations', reservationRoutes);
+app.use('/api/n8n', n8nRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {

@@ -44,6 +44,7 @@ function setupWhatsAppSocketBroadcast(companyId) {
       nombre: contact.pushname || "Desconocido",
       mensaje: body,
       hora: new Date().toISOString(),
+      companyId: companyId,
     };
     // Comprobar si el número está excluido del flujo de n8n
     const fromNumber = from.replace('@c.us', '');
