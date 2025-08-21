@@ -36,6 +36,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Importar rutas
 import botRoutes from './routes/bot.routes.js';
+import companyRoutes from './routes/company.routes.js';
 
 // Rutas principales
 app.get('/', (req, res) => {
@@ -44,6 +45,7 @@ app.get('/', (req, res) => {
 
 // Rutas de la API
 app.use('/api/bot', botRoutes);
+app.use('/api/companies', companyRoutes);
 
 app.get('/api/test-socket', (req, res) => {
   const connectedClients = io.engine.clientsCount;
