@@ -279,11 +279,62 @@ export const listVigentPromos = async (req, res, next) => {
     }
 };
 
+/**
+ * Busca promociones por nombre o descripción
+ * Accesible con token de autenticación o companyId directo
+ */
+export const searchPromos = async (req, res, next) => {
+    try {
+        const { searchTerm, companyId: directCompanyId } = req.query;
+        const companyId = directCompanyId || req.company?._id?.toString();
+        console.log("Search term", searchTerm)
+        if (!companyId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere companyId o autenticación válida'
+            });
+        }
+
+        if (!searchTerm || searchTerm.trim().length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'El término de búsqueda debe tener al menos 2 caracteres'
+            });
+        }
+
+        // Crear expresión regular para búsqueda insensible a mayúsculas/minúsculas
+        const searchRegex = new RegExp(searchTerm, 'i');
+
+        const promos = await Promo.find({
+            company: companyId,
+            $or: [
+                { name: { $regex: searchRegex } },
+                { description: { $regex: searchRegex } }
+            ]
+        }, 'name description price img periodo periodo_hour')
+            .sort({ createdAt: -1 });
+        console.log("Promos encontradas", promos)
+        return res.status(200).json({
+            success: true,
+            data: promos
+        });
+
+    } catch (error) {
+        console.error('Error al buscar promociones:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error al buscar promociones',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 export default {
     createPromo,
     getPromo,
     updatePromo,
     deletePromo,
     listCompanyPromos,
-    listVigentPromos
-}; 
+    listVigentPromos,
+    searchPromos
+};

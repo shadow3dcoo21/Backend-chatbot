@@ -6,10 +6,19 @@ import { uploadCompanyImage, handleUploadError } from '../middlewares/uploadMidd
 
 const router = express.Router();
 
-// Middleware de autenticación para todas las rutas
-router.use(authMiddleware, canHandlePromos);
+// Ruta de búsqueda accesible con o sin permiso canHandlePromos
+router.get('/search', promoController.searchPromos);
 
-// Rutas de promociones
+// Middleware de autenticación para todas las rutas
+router.use(authMiddleware);
+
+// Ruta de búsqueda accesible con o sin permiso canHandlePromos
+// router.get('/search', promoController.searchPromos);
+
+// Middleware para rutas que requieren permiso canHandlePromos
+router.use(canHandlePromos);
+
+// Rutas de promociones que requieren permiso canHandlePromos
 router.post('/', uploadCompanyImage, handleUploadError, promoController.createPromo);
 router.get('/', promoController.listCompanyPromos);
 router.get('/vigent', promoController.listVigentPromos);
@@ -17,4 +26,4 @@ router.get('/:id', promoController.getPromo);
 router.put('/:id', uploadCompanyImage, handleUploadError, promoController.updatePromo);
 router.delete('/:id', promoController.deletePromo);
 
-export default router; 
+export default router;

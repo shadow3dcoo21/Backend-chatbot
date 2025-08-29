@@ -305,6 +305,139 @@ const canHandleReservas = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware para verificar permisos de gestión de tools
+ * Permite acceso a admins y miembros con permiso canHandleTools
+ */
+const canHandleTools = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const companyId = req.body.companyId || req.query.companyId;
+
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere el ID de la compañía',
+        code: 'COMPANY_ID_REQUIRED'
+      });
+    }
+
+    // Buscar la compañía con los miembros relevantes
+    const company = await Company.findOne({
+      _id: companyId,
+      'members.userId': id,
+      'members.status': 'active'
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        error: 'Compañía no encontrada o no tienes acceso',
+        code: 'COMPANY_NOT_FOUND'
+      });
+    }
+
+    // Encontrar el miembro actual
+    const member = company.members.find(m =>
+      m.userId.toString() === id.toString()
+    );
+
+    if (!member) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar tools',
+        code: 'TOOL_MANAGEMENT_FORBIDDEN'
+      });
+    }
+
+    // Verificar si es admin o tiene permiso canHandleTools
+    const isAdmin = ['owner', 'admin'].includes(member.role);
+    const hasToolPermission = member.permissions?.canHandleTools === true;
+
+    if (!isAdmin && !hasToolPermission) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para gestionar tools',
+        code: 'INSUFFICIENT_PERMISSIONS'
+      });
+    }
+
+    // Agregar información de la compañía al request para su uso posterior
+    req.company = company;
+    req.member = member;
+    next();
+  } catch (error) {
+    console.error('Error en verificación de permisos de tools:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al verificar permisos',
+      code: 'PERMISSION_CHECK_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Middleware para manejar FAQs
+export const canHandleFAQs = async (req, res, next) => {
+  try {
+    const { companyId } = req.params;
+    const { id } = req.user;
+
+    // Si no hay companyId en params, buscar en body o query
+    const targetCompanyId = companyId || req.body.companyId || req.query.companyId;
+
+    if (!targetCompanyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de compañía requerido'
+      });
+    }
+
+    // Verificar que la compañía existe
+    const company = await Company.findById(targetCompanyId);
+    console.log('company', company);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Compañía no encontrada'
+      });
+    }
+
+    // Verificar que el usuario es miembro de la compañía
+    const member = company.members.find(m => m.userId.toString() === id.toString());
+    if (!member) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes acceso a esta compañía'
+      });
+    }
+
+    // Verificar permisos: owner, admin o permiso específico
+    const hasPermission =
+      member.role === 'owner' ||
+      member.role === 'admin' ||
+      (member.permissions && member.permissions.canHandleFAQs);
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para manejar FAQs'
+      });
+    }
+
+    // Adjuntar información al request
+    req.company = company;
+    req.member = member;
+    next();
+  } catch (error) {
+    console.error('Error en middleware canHandleFAQs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
 export {
   checkCompanyPermission,
   isCompanyOwner,
@@ -312,5 +445,6 @@ export {
   isCompanyMember,
   canHandleProducts,
   canHandlePromos,
-  canHandleReservas
+  canHandleReservas,
+  canHandleTools
 };

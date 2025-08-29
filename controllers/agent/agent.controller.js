@@ -16,29 +16,30 @@ export const getCompanyProducts = async (req, res) => {
     try {
         const { companyId } = req.params;
         const { limit = 5, inStock } = req.query;
-        
+
         // Construir query base
         const query = { company: companyId };
-        
+
         // Filtrar solo productos en stock si se especifica
         if (inStock === 'true') {
             query.stock = true;
         }
-        
+
         // Proyección para incluir solo campos necesarios
         const projection = {
             name: 1,
             price: 1,
             description: 1,
             stock: 1,
-            image: 1
+            image: 1,
+            subProducts: 1,
         };
-        
+
         // Ejecutar consulta optimizada
         const products = await Product.find(query, projection)
             .limit(parseInt(limit))
             .lean(); // Usar lean() para respuestas más rápidas y ligeras
-        
+
         // Respuesta compacta
         return res.json(products);
     } catch (error) {
@@ -58,7 +59,7 @@ export const getActivePromos = async (req, res) => {
         const { companyId } = req.params;
         const now = new Date();
         const currentHour = now.getHours();
-        
+
         // Consulta optimizada para promociones activas
         const activePromos = await Promo.find({
             company: companyId,
@@ -73,7 +74,7 @@ export const getActivePromos = async (req, res) => {
             price: 1,
             img: 1
         }).lean();
-        
+
         return res.json(activePromos);
     } catch (error) {
         console.error('Error al obtener promociones para N8N:', error);
@@ -90,7 +91,7 @@ export const getActivePromos = async (req, res) => {
 export const getCompanyInfo = async (req, res) => {
     try {
         const { companyId } = req.params;
-        
+
         const company = await Company.findById(companyId, {
             name: 1,
             sector: 1,
@@ -100,13 +101,13 @@ export const getCompanyInfo = async (req, res) => {
             location: 1,
             image: 1
         }).lean();
-        
+
         if (!company) {
             return res.status(404).json({
                 error: 'Compañía no encontrada'
             });
         }
-        
+
         return res.json(company);
     } catch (error) {
         console.error('Error al obtener información de compañía para N8N:', error);
@@ -125,29 +126,29 @@ export const getCompanyReservations = async (req, res) => {
     try {
         const { companyId } = req.params;
         const { status, date, limit = 10 } = req.query;
-        
+
         // Construir query base
         const query = { company: companyId };
-        
+
         // Filtrar por estado si se especifica
         if (status && ['pendiente', 'confirmado', 'cancelado'].includes(status)) {
             query.status = status;
         }
-        
+
         // Filtrar por fecha si se especifica
         if (date) {
             const startDate = new Date(date);
             startDate.setHours(0, 0, 0, 0);
-            
+
             const endDate = new Date(date);
             endDate.setHours(23, 59, 59, 999);
-            
+
             query.dateTime = {
                 $gte: startDate,
                 $lte: endDate
             };
         }
-        
+
         // Proyección para incluir solo campos necesarios
         const projection = {
             firstName: 1,
@@ -157,13 +158,13 @@ export const getCompanyReservations = async (req, res) => {
             dateTime: 1,
             status: 1
         };
-        
+
         // Ejecutar consulta optimizada
         const reservations = await Reserva.find(query, projection)
             .sort({ dateTime: 1 })
             .limit(parseInt(limit))
             .lean(); // Usar lean() para respuestas más rápidas y ligeras
-        
+
         // Respuesta compacta
         return res.json(reservations);
     } catch (error) {

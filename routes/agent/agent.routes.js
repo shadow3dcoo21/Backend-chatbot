@@ -5,13 +5,13 @@
  */
 
 import express from 'express';
-import n8nAuthMiddleware from '../middlewares/n8nAuthMiddleware.js';
-import * as n8nController from '../controllers/n8n/n8n.controller.js';
+import n8nAuthMiddleware from '../../middlewares/agentAuthMiddleware.js';
+import * as n8nController from '../../controllers/agent/agent.controller.js';
 
 const router = express.Router();
 
 // Aplicar middleware de autenticación para N8N a todas las rutas
-router.use(n8nAuthMiddleware);
+//router.use(n8nAuthMiddleware);
 
 // Rutas para obtener información de productos
 router.get('/company/:companyId/products', n8nController.getCompanyProducts);

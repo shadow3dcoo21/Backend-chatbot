@@ -35,8 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Importar rutas
-import botRoutes from './routes/bot.routes.js';
+
 
 // Rutas principales
 app.get('/', (req, res) => {
@@ -59,7 +58,7 @@ app.get('/api/test-socket', (req, res) => {
   });
 });
 
-// Rutas de autenticación y funcionalidad
+// Rutas 
 import authRoutes from './routes/auth/auth.routes.js';
 import qrRoutes from './routes/chat/qr.routes.js';
 import messageRoutes from './routes/chat/message.routes.js';
@@ -72,7 +71,14 @@ import configChatbotRoutes from './routes/chat/configchatbot.routes.js';
 import productRoutes from './routes/product.routes.js';
 import promoRoutes from './routes/promo.routes.js';
 import reservationRoutes from './routes/reservation.routes.js';
-import n8nRoutes from './routes/n8n.routes.js';
+import agentRoutes from './routes/agent/agent.routes.js';
+import botRoutes from './routes/bot.routes.js';
+import toolRoutes from './routes/agent/tool.routes.js';
+import faqRoutes from './routes/agent/faq.routes.js';
+import faqPublicRoutes from './routes/agent/faq.public.routes.js';
+
+app.use('/api/faqs/public', faqPublicRoutes);
+app.use('/api/faqs', faqRoutes);
 
 // Aplicar rutas
 app.use('/api/auth', authRoutes);
@@ -87,7 +93,8 @@ app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/n8n', n8nRoutes);
+app.use('/api/n8n', agentRoutes);
+app.use('/api/tools', toolRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
@@ -144,3 +151,5 @@ server.listen(PORT, '0.0.0.0', () => {
 
 // Exportar para pruebas u otros usos
 export { app, server, io };
+
+
