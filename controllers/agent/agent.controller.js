@@ -14,7 +14,9 @@ import Reserva from '../../models/Reserva/Reserva.js';
  */
 export const getCompanyProducts = async (req, res) => {
     try {
+        
         const { companyId } = req.params;
+        console.log('companyId', companyId);
         const { limit = 5, inStock } = req.query;
 
         // Construir query base
