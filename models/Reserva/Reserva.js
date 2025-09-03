@@ -45,6 +45,11 @@ const reservaSchema = new mongoose.Schema({
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    googleCalendarEventId: {
+        type: String,
+        trim: true,
+        index: true
     }
 }, {
     timestamps: true
