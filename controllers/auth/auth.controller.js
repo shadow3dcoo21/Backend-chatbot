@@ -13,7 +13,7 @@ import Company from '../../models/Company/Company.js';
 // POST /login
 const loginUser = async (req, res) => {
   const { username, password, accessCode } = req.body;
-
+console.log(req.body);
   try {
     // 1️⃣ Buscar usuario activo
     const user = await User.findOne({ username, status: 'active' })

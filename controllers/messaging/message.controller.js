@@ -6,6 +6,8 @@ import { getClient, getAllMessages, saveIncomingMessage } from "../../services/w
 import jwt from "jsonwebtoken";
 const upload = multer({ dest: "mensajes/" });
 import chatStateService from "../../services/chatStateService.js";
+import Contact from "../../models/Contact/Contact.js";
+import { getIO } from "../../websocket/socket.js";
 
 export const sendMessage = async (req, res) => {
   const { numero, mensaje, isAutomated = false } = req.body;
@@ -42,7 +44,7 @@ export const sendMessage = async (req, res) => {
     }
 
     // Enviar el mensaje
-    await getClient(companyId).sendMessage(chatId, mensaje);
+    const sentMessage = await getClient(companyId).sendMessage(chatId, mensaje);
 
     const payload = {
       numero: chatId,
@@ -52,23 +54,38 @@ export const sendMessage = async (req, res) => {
       isAutomated
     };
 
-    // // 🧠 Guardar mensaje en memoria
-    // saveIncomingMessage(userId, {
-    //   numero: chatId,
-    //   nombre: null,
-    //   mensaje,
-    //   hora: new Date().toISOString(),
-    //   tipo: isAutomated ? "automatizado" : "enviado",
-    // });
+    // 🗄️ Guardar mensaje en la base de datos
+    try {
+      const cleanNumber = numero.replace('@c.us', '');
+      await Contact.addMessage(companyId, cleanNumber, {
+        content: mensaje,
+        timestamp: new Date(),
+        direction: 'outgoing',
+        isAutomated: isAutomated,
+        messageId: sentMessage.id._serialized
+      });
+      console.log(`✅ Mensaje guardado en BD para ${cleanNumber}`);
+    } catch (error) {
+      console.error('❌ Error al guardar mensaje en BD:', error);
+    }
 
-    // // 🛰️ Emitir a WebSocket si está configurado
-    // const io = getIO();
-    // if (io) {
-    //   io.to("words_updates").emit("new_message", {
-    //     ...payload,
-    //     userId,
-    //   });
-    // }
+    // 🧠 Guardar mensaje en memoria (mantener compatibilidad)
+    saveIncomingMessage(companyId, {
+      numero: chatId,
+      nombre: null,
+      mensaje,
+      hora: new Date().toISOString(),
+      tipo: isAutomated ? "automatizado" : "enviado",
+    });
+
+    // 🛰️ Emitir a WebSocket si está configurado
+    const io = getIO();
+    if (io) {
+      io.to(companyId).emit("new_message", {
+        ...payload,
+        companyId,
+      });
+    }
 
     return res.json({
       status: "Mensaje enviado correctamente",
@@ -250,5 +267,61 @@ export const getReceivedMessages = (req, res) => {
     return res.json(mensajes.slice(-100).reverse());
   } catch (err) {
     return res.status(401).json({ error: "Token inválido o expirado" });
+  }
+};
+
+/**
+ * Obtener mensajes de un contacto específico desde la base de datos
+ */
+export const getContactMessages = async (req, res) => {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.split(" ")[1];
+  const { companyId, number } = req.params;
+  const { limit = 50 } = req.query;
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const messages = await Contact.getMessages(companyId, number, parseInt(limit));
+    
+    return res.json({
+      success: true,
+      data: messages,
+      total: messages.length
+    });
+  } catch (err) {
+    console.error('Error al obtener mensajes del contacto:', err);
+    return res.status(500).json({ 
+      error: "Error al obtener mensajes del contacto",
+      details: err.message 
+    });
+  }
+};
+
+/**
+ * Obtener historial completo de conversación de un contacto
+ */
+export const getContactConversationHistory = async (req, res) => {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.split(" ")[1];
+  const { companyId, number } = req.params;
+  const { limit = 20 } = req.query;
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const conversationHistory = await Contact.getConversationHistory(companyId, number, parseInt(limit));
+    
+    return res.json({
+      success: true,
+      data: conversationHistory,
+      total: conversationHistory.messages.length
+    });
+  } catch (err) {
+    console.error('Error al obtener historial de conversación:', err);
+    return res.status(500).json({ 
+      error: "Error al obtener historial de conversación",
+      details: err.message 
+    });
   }
 };

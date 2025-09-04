@@ -2,7 +2,7 @@
 import express from "express";
 const router = express.Router();
 
-import { sendMessage, sendMassiveMessagesFromCsv, sendMassiveMessagesFromTxt, sendMassiveMessagesFromList, getReceivedMessages } from "../../controllers/messaging/message.controller.js";
+import { sendMessage, sendMassiveMessagesFromCsv, sendMassiveMessagesFromTxt, sendMassiveMessagesFromList, getReceivedMessages, getContactMessages, getContactConversationHistory } from "../../controllers/messaging/message.controller.js";
 
 router.post("/send/:companyId", sendMessage);
 
@@ -16,5 +16,11 @@ router.post("/massive-txt/:companyId", sendMassiveMessagesFromTxt);
 router.post("/massive-list/:companyId", sendMassiveMessagesFromList);
 
 router.get("/received/:companyId", getReceivedMessages);
+
+// Obtener mensajes de un contacto específico
+router.get("/contact/:companyId/:number", getContactMessages);
+
+// Obtener historial completo de conversación de un contacto
+router.get("/conversation/:companyId/:number", getContactConversationHistory);
 
 export default router;
