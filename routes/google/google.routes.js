@@ -38,7 +38,4 @@ router.get('/status/:companyId', authMiddleware, googleController.getConnectionS
  */
 router.delete('/disconnect/:companyId', authMiddleware, googleController.disconnect);
 
-// Crear reserva con Google Calendar
-router.post('/reservation/:companyId', googleController.createReservationWithCalendar);
-
 export default router;
