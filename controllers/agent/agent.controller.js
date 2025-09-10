@@ -175,3 +175,79 @@ export const getCompanyReservations = async (req, res) => {
         });
     }
 };
+
+/**
+ * Crea una nueva reserva sin autenticación (para agentes)
+ * Requiere companyId en el body para validar la compañía
+ */
+export const createReservationPublic = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+        const { firstName, lastName, peopleCount, category, dateTime } = req.body;
+
+        // Validaciones básicas
+        if (!firstName || !peopleCount || !category || !dateTime || !companyId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Campos requeridos: firstName, peopleCount, category, dateTime, companyId'
+            });
+        }
+
+        // Verificar que la compañía existe
+        const company = await Company.findById(companyId);
+        if (!company) {
+            return res.status(404).json({
+                success: false,
+                message: 'Compañía no encontrada'
+            });
+        }
+
+        // Validar fecha
+        const reservationDate = new Date(dateTime);
+        if (isNaN(reservationDate.getTime()) || reservationDate < new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha debe ser válida y futura'
+            });
+        }
+
+        // Crear la reserva
+        const reservationData = {
+            firstName: firstName.trim(),
+            lastName: lastName ? lastName.trim() : '',
+            peopleCount: parseInt(peopleCount),
+            category: category.trim(),
+            dateTime: reservationDate,
+            status: 'pendiente',
+            company: companyId,
+            createdBy: null, // Sin usuario autenticado
+            updatedBy: null
+        };
+
+        const reservation = new Reserva(reservationData);
+        await reservation.save();
+
+        // Respuesta optimizada para agentes
+        return res.status(201).json({
+            success: true,
+            message: 'Reserva creada exitosamente',
+            data: {
+                id: reservation._id,
+                firstName: reservation.firstName,
+                lastName: reservation.lastName,
+                peopleCount: reservation.peopleCount,
+                category: reservation.category,
+                dateTime: reservation.dateTime,
+                status: reservation.status,
+                createdAt: reservation.createdAt
+            }
+        });
+    } catch (error) {
+        console.error('Error al crear reserva pública:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor',
+            error: error.message
+        });
+    }
+};

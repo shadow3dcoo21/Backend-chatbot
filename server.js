@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Company from './models/Company/Company.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,7 +94,7 @@ app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/n8n', agentRoutes);
+app.use('/api/agent', agentRoutes);
 app.use('/api/tools', toolRoutes);
 
 // Manejo global de errores
@@ -104,9 +105,6 @@ app.use((err, req, res, next) => {
     message: err.message,
   });
 });
-
-// Importar el modelo de Compañía para validaciones
-import Company from './models/Company/Company.js';
 
 // WebSocket con registro de usuarios y compañías
 io.on('connection', (socket) => {

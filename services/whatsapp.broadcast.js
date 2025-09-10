@@ -6,7 +6,7 @@ import Contact from '../models/Contact/Contact.js';
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
-async function sendToN8n(payload, endpoint) {
+async function sendToIAAgent(payload, endpoint) {
   const axiosConfig = {
     timeout: 50000,
     headers: {
@@ -108,7 +108,7 @@ function setupWhatsAppSocketBroadcast(companyId) {
             whatsappData: payload,
             companyId: companyId,
           };
-          const respuesta = await sendToN8n(payloadEnviar, endpoint);
+          const respuesta = await sendToIAAgent(payloadEnviar, endpoint);
 
           //const respuesta = await axios.post(endpoint, payload);
 

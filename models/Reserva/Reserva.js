@@ -8,7 +8,7 @@ const reservaSchema = new mongoose.Schema({
     },
     lastName: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
     peopleCount: {
@@ -18,7 +18,7 @@ const reservaSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
     dateTime: {
@@ -40,11 +40,12 @@ const reservaSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        required: false
     }
 }, {
     timestamps: true

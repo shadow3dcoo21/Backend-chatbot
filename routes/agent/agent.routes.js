@@ -6,7 +6,7 @@
 
 import express from 'express';
 import n8nAuthMiddleware from '../../middlewares/agentAuthMiddleware.js';
-import * as n8nController from '../../controllers/agent/agent.controller.js';
+import * as agentController from '../../controllers/agent/agent.controller.js';
 
 const router = express.Router();
 
@@ -14,15 +14,17 @@ const router = express.Router();
 //router.use(n8nAuthMiddleware);
 
 // Rutas para obtener información de productos
-router.get('/company/:companyId/products', n8nController.getCompanyProducts);
+router.get('/company/:companyId/products', agentController.getCompanyProducts);
 
 // Rutas para obtener promociones activas
-router.get('/company/:companyId/promos/active', n8nController.getActivePromos);
+router.get('/company/:companyId/promos/active', agentController.getActivePromos);
 
 // Ruta para obtener información básica de la compañía
-router.get('/company/:companyId/info', n8nController.getCompanyInfo);
+router.get('/company/:companyId/info', agentController.getCompanyInfo);
 
 // Ruta para obtener reservas de una compañía
-router.get('/company/:companyId/reservations', n8nController.getCompanyReservations);
+router.get('/company/:companyId/reservations', agentController.getCompanyReservations);
+
+router.post('/reservations/:companyId/create', agentController.createReservationPublic);
 
 export default router;
