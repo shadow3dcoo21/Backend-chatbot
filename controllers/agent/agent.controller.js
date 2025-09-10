@@ -7,14 +7,17 @@ import Product from '../../models/Product/Product.js';
 import Promo from '../../models/Promo/Promo.js';
 import Company from '../../models/Company/Company.js';
 import Reserva from '../../models/Reserva/Reserva.js';
-
+import getOAuth2Client from '../../config/google.js';
+import { google } from 'googleapis';
 /**
  * Obtiene productos de una compañía de forma optimizada para N8N
  * Retorna solo los campos necesarios y permite filtrado básico
  */
 export const getCompanyProducts = async (req, res) => {
     try {
+
         const { companyId } = req.params;
+        console.log('companyId', companyId);
         const { limit = 5, inStock } = req.query;
 
         // Construir query base
@@ -177,77 +180,160 @@ export const getCompanyReservations = async (req, res) => {
 };
 
 /**
- * Crea una nueva reserva sin autenticación (para agentes)
- * Requiere companyId en el body para validar la compañía
+ * Crea una reserva en la base de datos y programa un evento en Google Calendar
  */
-export const createReservationPublic = async (req, res) => {
+export const createReservationWithCalendar = async (req, res) => {
+    console.log('🔄 Iniciando creación de reserva con Google Calendar');
+
     try {
         const { companyId } = req.params;
-        const { firstName, lastName, peopleCount, category, dateTime } = req.body;
+        const { firstName, lastName, peopleCount, category, dateTime, duration = 60, description = '' } = req.body;
 
-        // Validaciones básicas
-        if (!firstName || !peopleCount || !category || !dateTime || !companyId) {
+        console.log('📋 Datos recibidos:', { companyId, firstName, lastName, dateTime });
+
+        // Validar datos requeridos
+        if (!firstName || !lastName || !peopleCount || !category || !dateTime) {
             return res.status(400).json({
                 success: false,
-                message: 'Campos requeridos: firstName, peopleCount, category, dateTime, companyId'
+                message: 'Faltan campos requeridos: firstName, lastName, peopleCount, category, dateTime',
+                code: 'MISSING_REQUIRED_FIELDS'
             });
         }
 
-        // Verificar que la compañía existe
+        // Verificar que la compañía existe y tiene tokens de Google
         const company = await Company.findById(companyId);
         if (!company) {
+            console.log('❌ Error: Compañía no encontrada:', companyId);
             return res.status(404).json({
                 success: false,
-                message: 'Compañía no encontrada'
+                message: 'Compañía no encontrada',
+                code: 'COMPANY_NOT_FOUND'
             });
         }
 
-        // Validar fecha
-        const reservationDate = new Date(dateTime);
-        if (isNaN(reservationDate.getTime()) || reservationDate < new Date()) {
+        if (!company.googleAuth || !company.googleAuth.isConnected || !company.googleAuth.accessToken) {
+            console.log('❌ Error: Google Calendar no conectado para la compañía:', companyId);
             return res.status(400).json({
                 success: false,
-                message: 'La fecha debe ser válida y futura'
+                message: 'Google Calendar no está conectado para esta compañía',
+                code: 'GOOGLE_CALENDAR_NOT_CONNECTED'
             });
         }
 
-        // Crear la reserva
+        console.log('✅ Compañía encontrada y Google Calendar conectado');
+
+        // Crear la reserva en la base de datos
         const reservationData = {
-            firstName: firstName.trim(),
-            lastName: lastName ? lastName.trim() : '',
-            peopleCount: parseInt(peopleCount),
-            category: category.trim(),
-            dateTime: reservationDate,
-            status: 'pendiente',
+            firstName,
+            lastName,
+            peopleCount,
+            category,
+            dateTime: new Date(dateTime),
+            status: 'confirmado', // Las reservas con calendario se confirman automáticamente
             company: companyId,
-            createdBy: null, // Sin usuario autenticado
-            updatedBy: null
+            createdBy: req.user?.id || company._id, // Si no hay usuario, usar la compañía
+            updatedBy: req.user?.id || company._id
         };
 
         const reservation = new Reserva(reservationData);
         await reservation.save();
+        console.log('✅ Reserva creada en BD:', reservation._id);
 
-        // Respuesta optimizada para agentes
-        return res.status(201).json({
-            success: true,
-            message: 'Reserva creada exitosamente',
-            data: {
-                id: reservation._id,
-                firstName: reservation.firstName,
-                lastName: reservation.lastName,
-                peopleCount: reservation.peopleCount,
-                category: reservation.category,
-                dateTime: reservation.dateTime,
-                status: reservation.status,
-                createdAt: reservation.createdAt
+        // Configurar cliente OAuth2 con los tokens de la compañía
+        const oauth2Client = getOAuth2Client();
+        oauth2Client.setCredentials({
+            access_token: company.googleAuth.accessToken,
+            refresh_token: company.googleAuth.refreshToken,
+            token_type: company.googleAuth.tokenType,
+            expiry_date: company.googleAuth.expiryDate
+        });
+
+        // Crear el evento en Google Calendar
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+        const startDateTime = new Date(dateTime);
+        const endDateTime = new Date(startDateTime.getTime() + (duration * 60000)); // duration en minutos
+
+        const event = {
+            summary: `Reserva - ${firstName} ${lastName}`,
+            description: `Reserva para ${peopleCount} persona(s)\nCategoría: ${category}\nID de Reserva: ${reservation._id}${description ? `\n\nDescripción: ${description}` : ''}`,
+            start: {
+                dateTime: startDateTime.toISOString(),
+                timeZone: 'America/Lima', // Ajustar según tu zona horaria
+            },
+            end: {
+                dateTime: endDateTime.toISOString(),
+                timeZone: 'America/Lima',
+            },
+            attendees: [
+                {
+                    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`, // Email ficticio o real si se proporciona
+                    displayName: `${firstName} ${lastName}`
+                }
+            ],
+            reminders: {
+                useDefault: false,
+                overrides: [
+                    { method: 'email', minutes: 24 * 60 }, // 1 día antes
+                    { method: 'popup', minutes: 30 }, // 30 minutos antes
+                ],
+            },
+        };
+
+        console.log('📅 Creando evento en Google Calendar...');
+        const calendarResponse = await calendar.events.insert({
+            calendarId: 'primary',
+            resource: event,
+        });
+
+        // Actualizar la reserva con el ID del evento de Google Calendar
+        await Reserva.findByIdAndUpdate(reservation._id, {
+            $set: {
+                googleCalendarEventId: calendarResponse.data.id
             }
         });
+
+        console.log('✅ Evento creado en Google Calendar:', calendarResponse.data.id);
+
+        // Obtener la reserva completa con populate
+        const populatedReservation = await Reserva.findById(reservation._id)
+            .populate('company', 'name')
+            .populate('createdBy', 'username email')
+            .populate('updatedBy', 'username email');
+
+        return res.status(201).json({
+            success: true,
+            message: 'Reserva creada exitosamente y programada en Google Calendar',
+            data: {
+                reservation: populatedReservation,
+                googleCalendarEvent: {
+                    id: calendarResponse.data.id,
+                    htmlLink: calendarResponse.data.htmlLink,
+                    summary: calendarResponse.data.summary,
+                    start: calendarResponse.data.start,
+                    end: calendarResponse.data.end
+                }
+            }
+        });
+
     } catch (error) {
-        console.error('Error al crear reserva pública:', error);
+        console.error('❌ Error al crear reserva con Google Calendar:', error.message);
+
+        // Si hay error después de crear la reserva, intentar eliminarla
+        if (error.reservationId) {
+            try {
+                await Reserva.findByIdAndDelete(error.reservationId);
+                console.log('🗑️ Reserva eliminada debido al error en Google Calendar');
+            } catch (deleteError) {
+                console.error('Error al eliminar reserva:', deleteError);
+            }
+        }
+
         return res.status(500).json({
             success: false,
-            message: 'Error interno del servidor',
-            error: error.message
+            message: 'Error al crear la reserva con Google Calendar',
+            code: 'RESERVATION_CALENDAR_ERROR',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };

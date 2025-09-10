@@ -3,6 +3,7 @@ import { getClient, saveIncomingMessage, getAllMessages } from "./whatsapp.servi
 import { isChatbotActive } from './configChatbot.service.js'
 import chatStateService from "./chatStateService.js";
 import Contact from '../models/Contact/Contact.js';
+import messageDebounceService from './messageDebounceService.js';
 
 const listenersRegistrados = new Set(); // 👈 Para evitar múltiples registros
 
@@ -21,12 +22,12 @@ async function sendToIAAgent(payload, endpoint) {
     const respuesta = await axios.post(endpoint, payload, axiosConfig);
 
     // CAMBIAR ESTA LÍNEA:
-    if (respuesta.data?.reply?.content) {
+    if (respuesta.data?.response?.content) {
       console.log(
         "✅ Respuesta recibida del agente:",
-        respuesta.data.reply.content
+        respuesta.data.response.content
       );
-      return respuesta.data.reply.content;
+      return respuesta.data.response.content;
     } else {
       console.log("⚠️ Agente no devolvió respuesta válida");
       console.log(
@@ -38,6 +39,73 @@ async function sendToIAAgent(payload, endpoint) {
   } catch (err) {
     console.error("❌ Error en POST HTTP al agente:", err.message);
     return null;
+  }
+}
+
+/**
+ * Función para enviar mensajes agrupados a N8N
+ */
+async function sendGroupedMessageToN8n(companyId, groupedPayload) {
+  try {
+    const chatState = await chatStateService.getChatState(companyId, groupedPayload.numero);
+    const globalStateBot = await isChatbotActive(companyId);
+
+    if (chatState.botActive && globalStateBot) {
+      const endpoint = process.env.N8N_WEBHOOK;
+
+      // 🗂️ Obtener historial de conversación
+      const fromNumber = groupedPayload.numero.replace('@c.us', '');
+      const conversationHistory = await Contact.getConversationHistory(companyId, fromNumber, 20);
+
+      const payloadEnviar = {
+        whatsappData: groupedPayload,
+        messageId: groupedPayload.messageIds[groupedPayload.messageIds.length - 1], // Usar el último messageId
+        companyId: companyId,
+        conversationHistory: conversationHistory,
+        isGrouped: true
+      };
+
+      console.log(`📚 Enviando mensaje agrupado con historial de conversación a N8N`);
+      const respuesta = await sendToN8n(payloadEnviar, endpoint);
+
+      if (respuesta) {
+        console.log("Enviando respuesta del bot para mensaje agrupado:", respuesta);
+        const client = getClient(companyId);
+        const sentMessage = await client.sendMessage(groupedPayload.numero, respuesta);
+
+        // 🗄️ Guardar respuesta del bot en la base de datos
+        try {
+          await Contact.addMessage(companyId, fromNumber, {
+            content: respuesta,
+            timestamp: new Date(),
+            direction: 'outgoing',
+            isAutomated: true,
+            messageId: sentMessage.id._serialized,
+            nombre: groupedPayload.nombre
+          });
+          console.log(`✅ Respuesta del bot para mensaje agrupado guardada en BD para ${fromNumber}`);
+        } catch (error) {
+          console.error('❌ Error al guardar respuesta del bot en BD:', error);
+        }
+
+        // Emitir mensaje enviado al socket
+        const sentPayload = {
+          numero: groupedPayload.numero,
+          nombre: groupedPayload.nombre,
+          mensaje: respuesta,
+          hora: new Date().toISOString(),
+          tipo: "enviado",
+          isGrouped: true
+        };
+        global.io.to(companyId).emit("new_message", sentPayload);
+        console.log("emisión de evento para companyid:", companyId);
+        console.log("emisión de evento para payload:", sentPayload);
+      }
+    } else {
+      console.log("Bot inactivo para mensaje agrupado, solo guardando mensaje");
+    }
+  } catch (error) {
+    console.error("❌ Error al procesar mensaje agrupado:", error);
   }
 }
 
@@ -78,72 +146,44 @@ function setupWhatsAppSocketBroadcast(companyId) {
       mensaje: body,
       hora: new Date().toISOString(),
       companyId: companyId,
-
+      messageId: msg.id._serialized
     };
+
     // Comprobar si el número está excluido del flujo de n8n
     const fromNumber = from.replace('@c.us', '');
     const contactDb = await Contact.findByCompanyAndNumber(companyId, fromNumber);
     const isExcluded = contactDb?.excludedFromN8n === true;
 
+    // 🗄️ Guardar mensaje recibido en la base de datos inmediatamente
+    try {
+      const cleanNumber = from.replace('@c.us', '');
+      await Contact.addMessage(companyId, cleanNumber, {
+        content: body,
+        timestamp: new Date(),
+        direction: 'incoming',
+        isAutomated: false,
+        messageId: msg.id._serialized,
+        nombre: contact.pushname || "Desconocido"
+      });
+      console.log(`✅ Mensaje recibido guardado en BD para ${cleanNumber}`);
+    } catch (error) {
+      console.error('❌ Error al guardar mensaje recibido en BD:', error);
+    }
+
+    // Emitir mensaje inmediatamente al frontend
+    global.io.to(companyId).emit("new_message", payload);
+    console.log("📩 Mensaje emitido al frontend:", payload);
+
     if (isExcluded) {
-      // Solo almacenar y mostrar, NO enviar a n8n
-      saveIncomingMessage(companyId, payload, null);
-      global.io.to(companyId).emit("new_message", payload);
-      console.log("emisión de evento para companyid:", companyId)
-      console.log("emisión de evento para payload:", payload)
       console.log(`Mensaje de ${from} excluido del flujo n8n para company ${companyId}`);
       return;
     }
 
-    console.log("📩 Nuevo mensaje válido broadcast:", payload);
-    global.io.to(companyId).emit("new_message", payload);
-
-    try {
-      const chatState = await chatStateService.getChatState(companyId, from);
-      const globalStateBot = await isChatbotActive(companyId)
-      if (chatState.botActive && globalStateBot) {
-        try {
-          const endpoint = process.env.N8N_WEBHOOK;
-          const payloadEnviar = {
-            whatsappData: payload,
-            companyId: companyId,
-          };
-          const respuesta = await sendToIAAgent(payloadEnviar, endpoint);
-
-          //const respuesta = await axios.post(endpoint, payload);
-
-          if (respuesta) {
-            console.log("Enviando respuesta del bot:", respuesta);
-            await client.sendMessage(from, respuesta);
-            saveIncomingMessage(companyId, payload, respuesta);
-
-            // Emitir mensaje enviado al socket
-            const sentPayload = {
-              numero: from,
-              nombre: null,
-              mensaje: respuesta,
-              hora: new Date().toISOString(),
-              tipo: "enviado"
-            };
-            global.io.to(companyId).emit("new_message", sentPayload);
-            console.log("emisión de evento para companyid:", companyId)
-            console.log("emisión de evento para payload:", sentPayload)
-          } else {
-            saveIncomingMessage(companyId, payload, null);
-          }
-        } catch (err) {
-          console.error("❌ Error en webhook:", err.message);
-          saveIncomingMessage(companyId, payload, null);
-        }
-      } else {
-        // Bot is inactive for this chat, just save the message
-        console.log("Bot inactivo para este chat, solo guardando mensaje");
-        saveIncomingMessage(companyId, { ...payload, tipo: "recibido" }, null);
-      }
-    } catch (err) {
-      console.error("❌ Error conectando con n8n:", err.message);
-      saveIncomingMessage(companyId, payload, null);
-    }
+    // 🕐 Usar sistema de debounce para agrupar mensajes
+    console.log(`⏱️ Agregando mensaje al buffer de debounce para ${from}`);
+    messageDebounceService.addMessage(companyId, from, payload, (groupedPayload) => {
+      return sendGroupedMessageToN8n(companyId, groupedPayload);
+    });
     console.log("Lista de mensajes", getAllMessages(companyId))
   });
 

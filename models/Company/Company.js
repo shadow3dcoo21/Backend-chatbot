@@ -81,6 +81,33 @@ const companySchema = new mongoose.Schema({
     type: Map,
     of: mongoose.Schema.Types.Mixed,
     default: {}
+  },
+  // Configuración de autenticación con Google Calendar
+  googleAuth: {
+    accessToken: {
+      type: String,
+      default: null
+    },
+    refreshToken: {
+      type: String,
+      default: null
+    },
+    tokenType: {
+      type: String,
+      default: 'Bearer'
+    },
+    expiryDate: {
+      type: Date,
+      default: null
+    },
+    scope: {
+      type: [String],
+      default: []
+    },
+    isConnected: {
+      type: Boolean,
+      default: false
+    }
   }
 }, { 
   timestamps: true,

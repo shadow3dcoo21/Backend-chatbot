@@ -5,13 +5,13 @@
  */
 
 import express from 'express';
-import n8nAuthMiddleware from '../../middlewares/agentAuthMiddleware.js';
+import agentAuthMiddleware from '../../middlewares/agentAuthMiddleware.js';
 import * as agentController from '../../controllers/agent/agent.controller.js';
 
 const router = express.Router();
 
-// Aplicar middleware de autenticación para N8N a todas las rutas
-//router.use(n8nAuthMiddleware);
+// Aplicar middleware de autenticación para agentes a todas las rutas
+//router.use(agentAuthMiddleware);
 
 // Rutas para obtener información de productos
 router.get('/company/:companyId/products', agentController.getCompanyProducts);
@@ -25,6 +25,7 @@ router.get('/company/:companyId/info', agentController.getCompanyInfo);
 // Ruta para obtener reservas de una compañía
 router.get('/company/:companyId/reservations', agentController.getCompanyReservations);
 
-router.post('/reservations/:companyId/create', agentController.createReservationPublic);
+// Ruta para crear una reserva con integración con Google
+router.post('/company/:companyId/reservations', agentController.createReservationWithCalendar);
 
 export default router;

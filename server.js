@@ -1,7 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+console.log('Inicializacion de server')
 import http from 'http';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Company from './models/Company/Company.js';
@@ -15,7 +17,6 @@ import { corsOptions } from './config/cors/cors.js';
 
 // Inicializar la aplicación
 const app = express();
-dotenv.config();
 
 // Conexión a la base de datos
 connectDB();
@@ -58,6 +59,7 @@ app.get('/api/test-socket', (req, res) => {
     transport: 'WebSocket available'
   });
 });
+console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
 
 // Rutas 
 import authRoutes from './routes/auth/auth.routes.js';
@@ -77,7 +79,7 @@ import botRoutes from './routes/bot.routes.js';
 import toolRoutes from './routes/agent/tool.routes.js';
 import faqRoutes from './routes/agent/faq.routes.js';
 import faqPublicRoutes from './routes/agent/faq.public.routes.js';
-
+import googleRoutes from './routes/google/google.routes.js';
 app.use('/api/faqs/public', faqPublicRoutes);
 app.use('/api/faqs', faqRoutes);
 
@@ -94,8 +96,9 @@ app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/agent', agentRoutes);
+app.use('/api/agents', agentRoutes);
 app.use('/api/tools', toolRoutes);
+app.use('/api/google', googleRoutes);
 
 // Manejo global de errores
 app.use((err, req, res, next) => {
