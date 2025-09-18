@@ -22,12 +22,12 @@ async function sendToN8n(payload, endpoint) {
     const respuesta = await axios.post(endpoint, payload, axiosConfig);
 
     // CAMBIAR ESTA LÍNEA:
-    if (respuesta.data?.response?.content) {
+    if (respuesta.data?.response) {
       console.log(
         "✅ Respuesta recibida del agente:",
-        respuesta.data.response.content
+        respuesta.data.response
       );
-      return respuesta.data.response.content;
+      return respuesta.data.response;
     } else {
       console.log("⚠️ Agente no devolvió respuesta válida");
       console.log(
@@ -58,11 +58,19 @@ async function sendGroupedMessageToN8n(companyId, groupedPayload) {
       const conversationHistory = await Contact.getConversationHistory(companyId, fromNumber, 20);
       
       const payloadEnviar = {
-        whatsappData: groupedPayload,
-        messageId: groupedPayload.messageIds[groupedPayload.messageIds.length - 1], // Usar el último messageId
-        companyId: companyId,
-        conversationHistory: conversationHistory,
-        isGrouped: true
+        numero: groupedPayload.numero,
+        whatsappData: [
+          {
+            mensaje: groupedPayload.mensaje,
+            nombre: groupedPayload.nombre,
+            hora: groupedPayload.hora,
+            messageId: groupedPayload.messageId,
+            messageIds: groupedPayload.messageIds,
+            conversationHistory: conversationHistory,
+            isGrouped: true
+          }
+        ],
+        companyId: companyId
       };
       
       console.log(`📚 Enviando mensaje agrupado con historial de conversación a N8N`);
