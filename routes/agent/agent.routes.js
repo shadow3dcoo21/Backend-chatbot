@@ -17,7 +17,7 @@ const router = express.Router();
 router.get('/company/:companyId/products', agentController.getCompanyProducts);
 
 // Rutas para obtener promociones activas
-router.get('/company/:companyId/promos/active', agentController.getActivePromos);
+router.get('/company/:companyId/promos', agentController.getActivePromos);
 
 // Ruta para obtener información básica de la compañía
 router.get('/company/:companyId/info', agentController.getCompanyInfo);

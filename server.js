@@ -96,7 +96,7 @@ app.use('/api/configchatbot', configChatbotRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/promos', promoRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/agents', agentRoutes);
+app.use('/api/agent', agentRoutes);
 app.use('/api/tools', toolRoutes);
 app.use('/api/google', googleRoutes);
 

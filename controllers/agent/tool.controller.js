@@ -4,29 +4,37 @@ import mongoose from 'mongoose';
 // Crear una nueva tool
 export const createTool = async (req, res) => {
     try {
-        const { name, method, url, queryTemplate, bodyTemplate, headers, pick, enabled, description } = req.body;
+        const { name, entity, description } = req.body;
         const companyId = req.company._id; // Usar la compañía validada por el middleware
         const userId = req.user.id;
 
-        // Validar que el método sea válido
-        if (!['GET', 'POST'].includes(method?.toUpperCase())) {
+        // Validaciones
+        if (!name || name.trim() === '') {
             return res.status(400).json({
                 success: false,
-                message: 'El método debe ser GET o POST'
+                message: 'El nombre es requerido'
+            });
+        }
+
+        if (!entity || entity.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'La entidad es requerida'
+            });
+        }
+
+        if (!description || description.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'La descripción es requerida'
             });
         }
 
         // Crear la nueva tool
         const newTool = new Tool({
-            name,
-            method: method.toUpperCase(),
-            url,
-            queryTemplate,
-            bodyTemplate,
-            headers,
-            pick,
-            enabled: enabled !== undefined ? enabled : true,
-            description,
+            name: name.trim(),
+            entity: entity.trim(),
+            description: description.trim(),
             company: companyId,
             createdBy: userId
         });
@@ -41,7 +49,7 @@ export const createTool = async (req, res) => {
         });
     } catch (error) {
         console.error('Error al crear tool:', error);
-        
+
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
@@ -73,7 +81,7 @@ export const listTools = async (req, res) => {
         }
 
         const tools = await Tool.findByCompany(companyId, options);
-        const total = await Tool.countDocuments({ 
+        const total = await Tool.countDocuments({
             company: companyId,
             ...(enabled !== undefined && { enabled: enabled === 'true' })
         });
@@ -126,7 +134,7 @@ export const listToolsPublic = async (req, res) => {
 
         // Solo devolver tools habilitadas por defecto
         const tools = await Tool.findByCompany(companyId, options);
-        const total = await Tool.countDocuments({ 
+        const total = await Tool.countDocuments({
             company: companyId,
             enabled: options.enabled
         });
@@ -195,7 +203,7 @@ export const updateTool = async (req, res) => {
         const { id } = req.params;
         const companyId = req.company._id; // Usar la compañía validada por el middleware
         const userId = req.user.id;
-        const updateData = req.body;
+        const { name, entity, description } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -204,29 +212,44 @@ export const updateTool = async (req, res) => {
             });
         }
 
-        // Validar método si se está actualizando
-        if (updateData.method && !['GET', 'POST'].includes(updateData.method.toUpperCase())) {
+        // Validaciones
+        if (name && name.trim() === '') {
             return res.status(400).json({
                 success: false,
-                message: 'El método debe ser GET o POST'
+                message: 'El nombre no puede estar vacío'
             });
         }
 
-        // Normalizar método a mayúsculas
-        if (updateData.method) {
-            updateData.method = updateData.method.toUpperCase();
+        if (entity && entity.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'La entidad no puede estar vacía'
+            });
         }
 
-        // Agregar información de actualización
-        updateData.updatedBy = userId;
+        if (description && description.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'La descripción no puede estar vacía'
+            });
+        }
+
+        // Preparar datos de actualización
+        const updateData = {
+            updatedBy: userId
+        };
+
+        if (name) updateData.name = name.trim();
+        if (entity) updateData.entity = entity.trim();
+        if (description) updateData.description = description.trim();
 
         const updatedTool = await Tool.findOneAndUpdate(
             { _id: id, company: companyId },
             updateData,
             { new: true, runValidators: true }
         )
-        .populate('createdBy', 'username email')
-        .populate('updatedBy', 'username email');
+            .populate('createdBy', 'username email')
+            .populate('updatedBy', 'username email');
 
         if (!updatedTool) {
             return res.status(404).json({
@@ -242,7 +265,7 @@ export const updateTool = async (req, res) => {
         });
     } catch (error) {
         console.error('Error al actualizar tool:', error);
-        
+
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,

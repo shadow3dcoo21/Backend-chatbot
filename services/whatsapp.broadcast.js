@@ -51,7 +51,7 @@ async function sendGroupedMessageToN8n(companyId, groupedPayload) {
     const globalStateBot = await isChatbotActive(companyId);
 
     if (chatState.botActive && globalStateBot) {
-      const endpoint = process.env.N8N_WEBHOOK;
+      const endpoint = process.env.IA_WEBHOOK;
 
       // 🗂️ Obtener historial de conversación
       const fromNumber = groupedPayload.numero.replace('@c.us', '');
@@ -74,7 +74,7 @@ async function sendGroupedMessageToN8n(companyId, groupedPayload) {
       };
 
       console.log(`📚 Enviando mensaje agrupado con historial de conversación a N8N`);
-      const respuesta = await sendToN8n(payloadEnviar, endpoint);
+      const respuesta = await sendToIAAgent(payloadEnviar, endpoint);
 
       if (respuesta) {
         console.log("Enviando respuesta del bot para mensaje agrupado:", respuesta);

@@ -279,7 +279,6 @@ export const createReservationWithCalendar = async (req, res) => {
                 ],
             },
         };
-
         console.log('📅 Creando evento en Google Calendar...');
         const calendarResponse = await calendar.events.insert({
             calendarId: 'primary',
